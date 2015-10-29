@@ -1,50 +1,31 @@
-# Destructuring
+# 解构
 
-Last time we looked at Rust's data types. Once you have some data structure, you
-will want to get that data out. For structs, Rust has field access, just like
-C++. For tuples, tuple structs, and enums you must use destructuring (there are
-various convenience functions in the library, but they use destructuring
-internally). Destructuring of data structures doesn't happen in C++, but it
-might be familiar from languages such as Python or various functional languages.
-The idea is that just as you can create a data structure by filling out its
-fields with data from a bunch of local variables, you can fill out a bunch of
-local variables with data from a data structure. From this simple beginning,
-destructuring has become one of Rust's most powerful features. To put it another
-way, destructuring combines pattern matching with assignment into local
-variables.
+我们在前一章当中重点关注了Rust中的数据结构，当有了一个数据结构，你可能会像将数据从里面取出来。对于struct而言，你可以像在C++中一样使用域名进行访问。对tuple,enum和元组结构体，则必须使用解构(Destructuring)来进行数据提取。在C++中不存在数据解构的问题，但是Python或者很多函数式语言都有解构的概念（在有的语言中它被称为元组拆包)。它的中心思想是，使用类似于对象创建的语句结构，将已有对象的数据填入到指定的本地变量中。换句话说，解构就是一种模式匹配和本地变量赋值的结合。解构已经成为了Rust最有力的语言特性。
 
-Destructuring is done primarily through the let and match statements. The match
-statement is used when the structure being desctructured can have difference
-variants (such as an enum). A let expression pulls the variables out into the
-current scope, whereas match introduces a new scope. To compare:
+解构通常使用`let`和`match`语句完成。当数据结构有多重变体时(如enum)，你需要使用`match`语句。`let`表达式将各个变量放入到当前作用域中，而`match`语句则会引入新的作用域。如下面的代码所示
 
 ```rust
 fn foo(pair: (int, int)) {
     let (x, y) = pair;
-    // we can now use x and y anywhere in foo
+    // 我们可以在foo中的任何地方使用x和y
 
     match pair {
         (x, y) => {
-            // x and y can only be used in this scope
+            // 只能在这个作用域内使用x和y
         }
     }
 }
 ```
 
-The syntax for patterns (used after `let` and before `=>` in the above example)
-in both cases is (pretty much) the same. You can also use these patterns in
-argument position in function declarations:
+模式的语法（上例中`let`之后和`=>`之前的部分)在两个例子中是（几乎）完全一样的。你也可以在函数参数中使用相同的模式语法。
 
 ```rust
 fn foo((x, y): (int, int)) {
 }
 ```
+(这种用法对struct和元组结构体更用，而如果参数是tuple就没那么有用了)
 
-(Which is more useful for structs or tuple-structs than tuples).
-
-Most initialisation expressions can appear in a destructuring pattern and they
-can be arbitrarily complex. That can include references and primitive literals
-as well as data structures. For example,
+大多数初始化表达式都可以在解构模式中出现，而且它们可以任意的复杂。模式中也可以包含引用和原始类型的字面值。举个例子。
 
 ```rust
 struct St {
@@ -75,17 +56,9 @@ fn foo(x: &En) {
 }
 ```
 
-Note how we destructure through a reference by using `&` in the patterns and how
-we use a mix of literals (`5`, `3`, `St { ... }`), wildcards (`_`), and
-variables (`x`).
+需要注意的是我们需要在模式中使用`&`对引用进行解构。另外可以看到允许混合使用字面值(`5`, `3`, `St { ... }`)，下划线`_`，以及任意变量名（即使跟要匹配的值同名也可以）。
 
-You can use `_` wherever a variable is expected if you want to ignore a single
-item in a pattern, so we could have used `&Var3(_)` if we didn't care about the
-integer. In the first `Var4` arm we destructure the embedded struct (a nested
-pattern) and in the second `Var4` arm we bind the whole struct to a variable.
-You can also use `..` to stand in for all fields of a tuple or struct. So if you
-wanted to do something for each enum variant but don't care about the content of
-the variants, you could write:
+当有一个变量会出现而你又想忽略它时，可以使用`_`。比如在上面的例子中`&Var3(_)`表示匹配Var3变体，但是并不关心其中的具体值。在第一个`Var4`分支中我们将整个结构体都进行了绑定。当然也可以使用`..`来表示tuple和struct的所有域。因此当你想对enum的变体做某些事情而又不想管这个变体的具体结构时，可以这样写：
 
 ```rust
 fn foo(x: En) {
@@ -100,6 +73,7 @@ fn foo(x: En) {
 
 When destructuring structs, the fields don't need to be in order and you can use
 `..` to elide the remaining fields. E.g.,
+当解构struct时，可以不以声明时的顺序进行解构，同时也可以使用`..`忽略剩下的所有域。
 
 ```rust
 struct Big {
@@ -107,7 +81,7 @@ struct Big {
     field2: int,
     field3: int,
     field4: int,
-    field5: int,
+    field5: int,	
     field6: int,
     field7: int,
     field8: int,
@@ -120,9 +94,7 @@ fn foo(b: Big) {
 }
 ```
 
-As a shorthand with structs you can use just the field name which creates a
-local variable with that name. The let statement in the above example created
-two new local variables `x` and `y`. Alternatively, you could write
+struct解构的一个缩写版本可以直接创建域名字对应的本地变量，比如在上面的例子中命名了两个新的本地变量`x`和`y`，你也可以这样写：
 
 ```rust
 fn foo(b: Big) {
@@ -131,13 +103,9 @@ fn foo(b: Big) {
 }
 ```
 
-Now we create local variables with the same names as the fields, in this case
-`field3` and `field6`.
+这样就会自动创建两个跟域名字相同的本地变量，上面的例子中就是`field6`和`field3`。
 
-There are a few more tricks to Rust's destructuring. Lets say you want a
-reference to a variable in a pattern. You can't use `&` because that matches a
-reference, rather than creates one (and thus has the effect of dereferencing the
-object). For example,
+还有几个Rust中解构的小问题。假如你想要得到模式中一个变量的引用，不能直接使用`&`符号，因为它们将匹配一个引用而非创建一个引用（而且会对对象进行一个解引用操作)。例如
 
 ```rust
 struct Foo {
@@ -149,10 +117,10 @@ fn foo(x: Foo) {
 }
 ```
 
-Here, `y` has type `int` and is a copy of the field in `x`.
+这里`y`的类型是`int`而且时一个`x`的拷贝而非引用。
 
-To create a reference to something in a pattern, you use the `ref` keyword. For
-example,
+要创建一个到某个模式的引用，你需要使用`ref`关键字，如下所示
+
 
 ```rust
 fn foo(b: Big) {
@@ -161,22 +129,9 @@ fn foo(b: Big) {
 }
 ```
 
-Here, `x` and `field6` both have type `&int` and are references to the fields in `b`.
+这里`x`和`field6`的类型都是`&int`，而且它们都是对`b`对象中相应域的引用。
 
-One last trick when destructuring is that if you are detructuring a complex
-object, you might want to name intermediate objects as well as individual
-fields. Going back to an earlier example, we had the pattern `&Var4(3, St{ f1:
-3, f2: x }, 45)`. In that pattern we named one field of the struct, but you
-might also want to name the whole struct object. You could write `&Var4(3, s,
-45)` which would bind the struct object to `s`, but then you would have to use
-field access for the fields, or if you wanted to only match with a specific
-value in a field you would have to use a nested match. That is not fun. Rust
-lets you name parts of a pattern using `@` syntax. For example `&Var4(3, s @ St{
-f1: 3, f2: x }, 45)` lets us name both a field (`x`, for `f2`) and the whole
-struct (`s`).
+还有最后一个小问题，当你需要对复杂对象进行解构时，可能不仅对某个具体域，而对某个中间对象也感兴趣。在前面的例子中有一个模式`&Var4(3, s,45)`，在这个模式中我们将结构体的一个域命名为`x`。假如你想对整个`St`结构体进行命名，你可以写成`&Var4(3, s,
+45)`，从而将结构体对象命名为`s`，然而如果之后还需要访问其中的一个域就需要再写一个域访问语句，另外如果只想匹配某个域为某个值的对象，就需要再写一个嵌套的`match`语句。这一点也不好玩。Rust允许在模式中使用`@`语法来命名模式中的一部分，比如我们可以写`&Var4(3, s @ St{f1: 3, f2: x }, 45)`，这样可以同时将特定域（`x`对应`f2`）和整个结构体(`s`)同时命名。
 
-That just about covers your options with Rust pattern matching. There are a few
-features I haven't covered, such as matching vectors, but hopefully you know how
-to use `match` and `let` and have seen some of the powerful things you can do.
-Next time I'll cover some of the subtle interactions between match and borrowing
-which tripped me up a fair bit when learning Rust.
+上面介绍了在Rust中使用模式匹配的几个方式，但愿能让你了解使用`match`和`let`能实现哪些强大的特性。另外还有一些特性（如向量匹配）还没有提到。下一章我会介绍一些匹配和借出之间微妙的相互关系。在我学Rust的时候它们让我困惑了好一阵子。

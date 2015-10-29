@@ -1,71 +1,30 @@
-# Destructuring pt2 - match and borrowing
+# 解构II——匹配与借出
 
-When destructuring there are some surprises in store where borrowing is
-concerned. Hopefully, nothing surprising once you understand borrowed references
-really well, but worth discussing (it took me a while to figure out, that's for
-sure. Longer than I realised, in fact, since I screwed up the first version of
-this blog post).
+当使用解构时如果有借出的情况，会有一些意想不到的现象。虽说理论上如果你透彻的理解了借出引用的原理，这应该算不上意想不到，但我认为还是值得花一章来讨论（我就花了很久很久才搞明白，比我预想中的还要长，我甚至是在搞砸了这篇文章的第一版之后才真正弄明白）
 
-Imagine you have some `&Enum` variable `x` (where `Enum` is some enum type). You
-have two choices: you can match `*x` and list all the variants (`Variant1 =>
-...`, etc.) or you can match `x` and list reference to variant patterns
-(`&Variant1 => ...`, etc.). (As a matter of style, prefer the first form where
-possible since there is less syntactic noise). `x` is a borrowed reference and
-there are strict rules for how a borrowed reference can be dereferenced, these
-interact with match expressions in surprising ways (at least surprising to me),
-especially when you a modifying an existing enum in a seemingly innocuous way
-and then the compiler explodes on a match somewhere.
+想象一下，如果你有一个`&Enum`类型的变量`x`，其中`Enum`是一个枚举类型。你有两种选择，一是你可以对`*x`做匹配，并列出所有的变体(`Variant1 =>...`, etc.，以格式论，请尽量用这种方式，因为句法噪声要小些)。`x`是一个借出引用，而对借出引用进行解引用有这样那样的限制，而这些限制与`match`表达式混在一起时会有一些（至少对我来说）奇怪的表现，比如你看似完全无罪的修改了一个已存在的枚举，而编译器在`match`的某个地方却报警了。
 
-Before we get into the details of the match expression, lets recap Rust's rules
-for value passing. In C++, when assigning a value into a variable or passing it
-to a function there are two choices - pass-by-value and pass-by-reference. The
-former is the default case and means a value is copied either using a copy
-constructor or a bitwise copy. If you annotate the destination of the parameter
-pass or assignment with `&`, then the value is passed by reference - only a
-pointer to the value is copied and when you operate on the new variable, you are
-also operating on the old value.
+在介绍匹配表达式之前，我们先来回顾一下Rust的值传递规则。在C++中，将一个值赋给一个变量或传递给函数有两种方法：值传递或引用传递。前一种是默认选择，值被拷贝构造函数拷贝，或直接执行二进制拷贝；如果在函数参数前加上`&`标志，则会导致值以引用传递，只有一个指针被拷贝过去，而当在这个变量上做操作时，事实上是在操作旧的那个值
 
-Rust has the pass-by-reference option, although in Rust the source as well as
-the destination must be annotated with `&`. For pass-by-value in Rust, there are
-two further choices - copy or move. A copy is the same as C++'s semantics
-(except that there are no copy constructors in Rust). A move copies the value
-but destroys the old value - Rust's type system ensures you can no longer access
-the old value. As examples, `int` has copy semantics and `Box<int>` has move
-semantics:
+Rust有按引用传递的选项，只是在Rust中源值和目的值都要以`&`修饰。而要在Rust中进行值传递，有两种方法：拷贝和移动。拷贝就像在C++中一样（只是Rust中没有拷贝构造函数）。移动则会拷贝值并将久的值销毁，Rust的类型系统保证你无法再次访问旧的值。比如，`int`具有拷贝语义，而`Box<int>`使用移动语义。
 
 ```rust
     fn foo() {
     let x = 7i;
-    let y = x;                // x is copied
+    let y = x;                // x 被拷贝
     println!("x is {}", x);   // OK
 
     let x = box 7i;
-    let y = x;                // x is moved
-    //println!("x is {}", x); // error: use of moved value: `x`
+    let y = x;                // x 被移动
+    //println!("x is {}", x); // 错误：使用了已被移动的值x
 }
 ```
 
-Rust determines if an object has move or copy semantics by looking for
-destructors. Destructors probably need a post of their own, but for now, an
-object in Rust has a destructor if it implements the `Drop` trait. Just like
-C++, the destructor is executed just before an object is destroyed. If an object
-has a destructor then it has move semantics. If it does not, then all of its
-fields are examined and if any of those do then the whole object has move
-semantics. And so on down the object structure. If no destructors are found
-anywhere in an object, then it has copy semantics.
+Rust通过查找销毁器(Desturctors)来决定使用移动语义还是拷贝语义。销毁器可能需要单开一章来详述，但是现在你只需要知道Rust中如果一个对象实现了`Drop` trait，他就会有一个销毁器。与C++中相同，销毁器在对象被回收之前执行。如果一个对象有销毁器，那它就有移动语义。否则就会检查其中所有的域，如果有一个有移动语义则整个对象有移动语义。这一检查一直递归到结构体中。如果对象中没有任何成员有移动语义，则它有拷贝语义。
 
-Now, it is important that a borrowed object is not moved, otherwise you would
-have a reference to the old object which is no longer valid. This is equivalent
-to holding a reference to an object which has been destroyed after going out of
-scope - it is a kind of dangling pointer. If you have a pointer to an object,
-there could be other references to it. So if an object has move semantics and
-you have a pointer to it, it is unsafe to dereference that pointer. (If the
-object has copy semantics, dereferencing creates a copy and the old object will
-still exist, so other references will be fine).
+被借出的对象不能移动，否则你就会得到一个指向已不存在旧对象的引用。这相当于持有一个指向被销毁的对象的引用，有点像悬挂指针。如果有一个指向对象的指针，那也可能有其它的引用指向它。因此如果一个对象有移动语义，而你又有一个指向它的指针，对这个指针执行解引用会不安全。
 
-OK, back to match expressions. As I said earlier, if you want to match some `x`
-with type `&T` you can dereference once in the match clause or match the
-reference in every arm of the match expression. Example:
+OK，回到匹配表达式。如之前所说，如果你希望对一个类型为`&T`的值`x`进行模式匹配，可以首先对它进行解引用，或者在`match`的每个分支中都使用引用匹配表达式。如下面的例子所示
 
 ```rust
 enum Enum1 {
@@ -75,14 +34,14 @@ enum Enum1 {
 }
 
 fn foo(x: &Enum1) {
-    match *x {  // Option 1: deref here.
+    match *x {  // 第一个方法：先解引用
         Var1 => {}
         Var2 => {}
         Var3 => {}
     }
 
     match x {
-        // Option 2: 'deref' in every arm.
+        // 第二个方法：在分支中解引用
         &Var1 => {}
         &Var2 => {}
         &Var3 => {}
@@ -90,27 +49,13 @@ fn foo(x: &Enum1) {
 }
 ```
 
-In this case you can take either approach because `Enum1` has copy semantics.
-Let's take a closer look at each approach: in the first approach we dereference
-`x` to a temporary variable with type `Enum1` (which copies the value in `x`)
-and then do a match against the three variants of `Enum1`. This is a 'one level'
-match because we don't go deep into the value's type. In the second approach
-there is no dereferencing. We match a value with type `&Enum1` against a
-reference to each variant. This match goes two levels deep - it matches the type
-(always a reference) and looks inside the type to match the referred type (which
-is `Enum1`).
+因为`Enum1`有拷贝语义，上面的例子中可以使用任何一种方法。让我们仔细观察两种方法：第一个方法中我们对`x`进行解引用并放在一个类型为`Enum1`的临时变量中（而它是参数`x`的一个拷贝），之后对`Enum1`的三个变体进行匹配。这是一个单层match，因为我们没有深入到值的类型中；第二个方法中没有解引用，我们对`&Enum1`的每个变体进行了匹配。这个是一个深度为2的匹配——它首先对类型进行匹配（这个例子中永远是引用类型），之后对它指向的对象的类型进行匹配（这个例子中是`&Enum1`）。
 
-Either way, we must ensure that we (that is, the compiler) must ensure we
-respect Rust's invariants around moves and references - we must not move any
-part of an object if it is referenced. If the value being matched has copy
-semantics, that is trivial. If it has move semantics then we must make sure that
-moves don't happen in any match arm. This is accomplished either by ignoring
-data which would move, or making references to it (so we get by-reference
-passing rather than by-move).
+不论如何，我们（或者说编译器）必须保证我们遵守Rust关于移动和引用的不变性规则：如果某个对象的任何一部分被引用，则它不能被移动。如果一个值有拷贝语义，那倒无所谓。如果它有移动语义，则我们必须确保在任何一个match粉之中都不发生移动。为了保证这一点，要么需要忽略所有可能会移动的数据，要么就对它取引用（从而得到一个引用传递而非移动传递）。
 
 ```rust
 enum Enum2 {
-    // Box has a destructor so Enum2 has move semantics.
+    // Box有销毁器因而Enum2有移动语义
     Var1(Box<int>),
     Var2,
     Var3
@@ -118,37 +63,28 @@ enum Enum2 {
 
 fn foo(x: &Enum2) {
     match *x {
-        // We're ignoring nested data, so this is OK
+        // 忽略内嵌的数据，因此可行
         Var1(..) => {}
-        // No change to the other arms.
+        // 其它分支中不能修改
         Var2 => {}
         Var3 => {}
     }
 
     match x {
-        // We're ignoring nested data, so this is OK
+        // 忽略内嵌的数据，因此可行
         &Var1(..) => {}
-        // No change to the other arms.
+        // 其它分支中不能修改
         &Var2 => {}
         &Var3 => {}
     }
 }
 ```
 
-In either approach we don't refer to any of the nested data, so none of it is
-moved. In the first approach, even though `x` is referenced, we don't touch its
-innards in the scope of the dereference (i.e., the match expression) so nothing
-can escape. We also don't bind the whole value (i.e., bind `*x` to a variable),
-so we can't move the whole object either.
+无论使用哪种方式，我们都不能产生对内嵌数据的引用，因而任何一个都不会移动。在第一个方法中，即使`x`被引用了，我们不会在解引用（也就是match表达式）的作用域中对它的内部做改动，因此没有什么问题。我们同样不对整个值进行绑定（也就是不把`*x`绑定到一个变量上），因此我们不能移动整个对象。
 
-We can take a reference to any variant in the second match, but not in the
-derferenced version. So, in the second approach replacing the second arm with `a
-@ &Var2 => {}` is OK (`a` is a reference), but under the first approach we
-couldn't write `a @ Var2 => {}` since that would mean moving `*x` into `a`. We
-could write `ref a @ Var2 => {}` (in which `a` is also a reference), although
-it's not a construct you see very often.
+在第二个`match`中我们可以产生对任何一种变体的引用，然而第一个版本却不行。因此第二个方法的第二个分支可以写成`a @ &Var2 => {}`其中`a`时一个引用。然而在第一个方法中我们不能写成`a @ Var2 => {}`，因为这将导致将`*x`移动到`a`。我们可以写成`ref a @ Var2 => {}`(其中`a`也是一个引用)，不过这种写法不是很常见。
 
-But what about if we want to use the data nested inside `Var1`? We can't write:
+但是，如果我们需要使用`Var1`种内嵌的数据怎么办？我们不能写成：
 
 ```rust
 match *x {
@@ -157,7 +93,7 @@ match *x {
 }
 ```
 
-or
+或者
 
 ```rust
 match x {
@@ -166,29 +102,15 @@ match x {
 }
 ```
 
-because in both cases it means moving part of `x` into `y`. We can use the 'ref'
-keyword to get a reference to the data in `Var1`: `&Var1(ref y) => {}`.That is
-OK, because now we are not dereferencing anywhere and thus not moving any part
-of `x`. Instead we are creating a pointer which points into the interior of `x`.
+因为这两种方式都会造成`x`的一部分移动到了`y`。我们可以用`ref`关键字来获取`Var1`中数据的引用：`&Var1(ref y) => {}`。这是可以的，因为我们没有在任何地方对它解引用，因而不会移动`x`的任何部分。相反我们创建了一个指向`x`内部的指针。
 
-Alternatively, we could destructure the Box (this match is going three levels
-deep): `&Var1(box y) => {}`. This is OK because `int` has copy semantics and `y`
-is a copy of the `int` inside the `Box` inside `Var1` (which is 'inside' a
-borrowed reference). Since `int` has copy semantics, we don't need to move any
-part of `x`. We could also create a reference to the int rather than copy it:
-`&Var1(box ref y) => {}`. Again, this is OK, because we don't do any
-dereferencing and thus don't need to move any part of `x`. If the contents of
-the Box had move semantics, then we could not write `&Var1(box y) => {}`, we
-would be forced to use the reference version. We could also use similar
-techniques with the first approach to matching, which look the same but without
-the first `&`. For example, `Var1(box ref y) => {}`.
+另外，我们可以解构`Box`（match的深度进而增加为3层）：`&Var1(box y) => {}`。这是OK的，因为`int`有拷贝语义而`y`是`Var1`中的`Box`中的`int`的拷贝（也就是在一个借出引用的内部），因此不会导致`x`的任何部分移动。我们也可以创建一个到`int`的引用而不是拷贝它：`&Var1(box ref y) => {}`。这样也是可以的，因为我们没有做任何解引用，因而不会移动`x`的任何部分。如果`Box`的内容也有移动语义，就不能写成`&Var1(box y) => {}`，因此只能选择使用引用版本。同样的技巧可以应用于上面第一种写法，其它完全一样，只是没有第一个`&`，比如应写成 `Var1(box ref y) => {}`
 
-Now lets get more complex. Lets say you want to match against a pair of
-reference-to-enum values. Now we can't use the first approach at all:
+现在看看更复杂的例子，假如你想对一对枚举的引用做匹配。我们将完全不能用第一种方法：
 
 ```rust
 fn bar(x: &Enum2, y: &Enum2) {
-    // Error: x and y are being moved.
+    // 错误: x和y将被移动
     // match (*x, *y) {
     //     (Var2, _) => {}
     //     _ => {}
@@ -202,20 +124,11 @@ fn bar(x: &Enum2, y: &Enum2) {
 }
 ```
 
-The first approach is illegal because the value being matched is created by
-dereferencing `x` and `y` and then moving them both into a new tuple object. So
-in this circumstance, only the second approach works. And of course, you still
-have to follow the rules above for avoiding moving parts of `x` and `y`.
+第一个例子是非法的，因为`x`和`y`在被匹配之前首先被解引用，进而被移动走来构造新的tuple对象。在这种条件下只有第二种方法是可用的。当然仍然需要遵守上述的规则来避免移动`x`和`y`的某些部分。
 
-If you do end up only being able to get a reference to some data and you need
-the value itself, you have no option except to copy that data. Usually that
-means using `clone()`. If the data doesn't implement clone, you're going to have
-to further destructure to make a manual copy or implement clone yourself.
+如果你只能拿到对数据的一个引用，而你需要这个值本身。那你除了拷贝这个数据别无选择。大多数情况下需要使用`clone()`函数。如果数据的类型没有实现`clone`，你就必须对这个数据进行解构进而自行实现手动拷贝。
 
-What if we don't have a reference to a value with move semantics, but the value
-itself. Now moves are OK, because we know no one else has a reference to the
-value (the compiler ensures that if they do, we can't use the value). For
-example,
+如果我们有一个值本身，而不是一个指向具有移动语义的值的引用，那移动它是没有问题的，因为我们知道没有任何人拥有对它的引用（编译器可以保证这一点）。比如：
 
 ```rust
 fn baz(x: Enum2) {
@@ -226,20 +139,6 @@ fn baz(x: Enum2) {
 }
 ```
 
-There are still a few things to be aware of. Firstly, you can only move to one
-place. In the above example we are moving part of `x` into `y` and we'll forget
-about the rest. If we wrote `a @ Var1(y) => {}` we would be attempting to move
-all of `x` into `a` and part of `x` into `y`. That is not allowed, an arm like
-that is illegal. Making one of `a` or `y` a reference (using `ref a`, etc.) is
-not an option either, then we'd have the problem described above where we move
-whilst holding a reference. We can make both `a` and `y` references and then
-we're OK - neither is moving, so `x` remains in tact and we have pointers to the
-whole and a part of it.
+还有一些事情需要注意。首先，我们只能将值移动到一个地方，在上面的例子中，我们将`x`的部分移动到了`y`中，而将其他部分忽略掉。如果我们写成`a @ Var1(y) => {}`，也就是试图将`x`的一部分移动到`y`，而剩下的`x`移动到`a`，这样做是非法的。将`a`和`y`的仅一个作为引用将会导致移走有其它引用指向的对象的问题，因而也是非法的。我们可以同时将`a`和`y`作为引用，因为这样做不会影响`x`的完整性。
 
-Similarly (and more common), if we have a variant with multiple pieces of nested
-data, we can't take a reference to one datum and move another. For example if we
-had a `Var4` declared as `Var4(Box<int>, Box<int>)` we can have a match arm
-which references both (`Var4(ref y, ref z) => {}`) or a match arm which moves
-both (`Var4(y, z) => {}`) but you cannot have a match arm which moves one and
-references the other (`Var4(ref y, z) => {}`). This is because a partial move
-still destroys the whole object, so the reference would be invalid.
+同样的道理，如果有一个包含多个嵌套数据的变体，那我们不能同时移动一个数据并得到对另一个数据的引用的。比如如果有一个`Var4`变体声明为`Var4(Box<int>, Box<int>)`，可以用`Var4(ref y, ref z) => {}`（包含两个引用）或`Var4(y, z) => {}`（包含两个移动）来匹配，但是不能让其中一个为引用而另外一个是移动（`Var4(ref y, z) => {}`）。这是因为部分移动会摧毁整个对象，因此其他引用因此会失效。

@@ -1,41 +1,25 @@
-# Arrays and Vectors
+# Array和Vector
 
-Rust arrays are pretty different from C arrays. For starters they come in
-statically and dynamically sized flavours. These are more commonly known as
-fixed length arrays and slices. As we'll see, the former is kind of a bad name
-since both kinds of array have fixed (as opposed to growable) length. For a
-growable 'array', Rust provides the `Vec` collection.
+Rust的数组与C中的数组非常不同。Rust中的数组提供两种在长度确定性上不同的变体，它们分别被称为定长数组和分片。我们将会看到，后一个名字起的并不合适，因为它们都是定长而非可变长的。对于可变长数组，Rust提供了`Vec`容器。
 
+## 定长数组
 
-## Fixed length arrays
+定长数组是的长度和类型是静态的。比如说 `[i32; 4]`是一个长度为4的`i32`数组
 
-The length of a fixed length array is known statically and features in it's
-type. E.g., `[i32; 4]` is the type of an array of `i32`s with length four.
-
-Array literal and array access syntax is the same as C:
+数组字面量和数组访问语法与C相同
 
 ```rust
-let a: [i32; 4] = [1, 2, 3, 4];     // As usual, the type annotation is optional.
+let a: [i32; 4] = [1, 2, 3, 4];     // 像往常一样，可以不写类型标记
 println!("The second element is {}", a[1]);
 ```
 
-You'll notice that array indexing is zero-based, just like C.
+跟C中相同，数组下标是从0开始的。但是与C/C++不同，Rust中的数组有边界检查。事实上对数组的所有访问都要进行边界检查，从而使得Rust称为一个更安全的语言。
 
-However, unlike C/C++, array indexing is bounds checked. In fact all access to
-arrays is bounds checked, which is another way Rust is a safer language.
+如果你尝试执行`a[4]`，那么就会得到一个运行时错误。不幸的是即使这个错误看起来很明显，Rust编译器仍不能在编译时发现这个错误。
 
-If you try to do `a[4]`, then you will get a runtime panic. Unfortunately, the
-Rust compiler is not clever enough to give you a compile time error, even when
-it is obvious (as in this example).
+如果你宁愿冒风险也要从代码中榨取最后一滴性能，你可以对数组做未检查的访问，也就是使用数组的`get_unchecked`方法。这样的数组访问必须在unsafe块中完成，你应该只会在非常少的情况下用到它。
 
-If you like to live dangerously, or just need to get every last ounce of
-performance out of your program, you can still get unchecked access to arrays.
-To do this, use the `get_unchecked` method on an array. Unchecked array accesses
-must be inside an unsafe block. You should only need to do this in the rarest
-circumstances.
-
-Just like other data structures in Rust, arrays are immutable by default and
-mutability is inherited. Mutation is also done via the indexing syntax:
+就像Rust中的其它数据结构一样，数组默认是不可变的，而且其可变性是继承的。要修改数组元素需要使用下标语法。
 
 ```rust
 let mut a = [1, 2, 3, 4];
@@ -43,7 +27,7 @@ a[3] = 5;
 println!("{:?}", a);
 ```
 
-And just like other data, you can borrow an array by taking a reference to it:
+像其它数据一样，你可以通过取得一个引用来借出一个数组。
 
 ```rust
 fn foo(a: &[i32; 4]) {
@@ -55,67 +39,32 @@ fn main() {
 }
 ```
 
-Notice that indexing still works on a borrowed array.
+注意对借出的数组，下标依然可用
 
-This is a good time to talk about the most interesting aspect of Rust arrays for
-C++ programmers - their representation. Rust arrays are value types: they are
-allocated on the stack like other values and an array object is a sequence of
-values, not a pointer to those values (as in C). So from our examples above, `let
-a = [1_i32, 2, 3, 4];` will allocate 16 bytes on the stack and executing `let b
-= a;` will copy 16 bytes. If you want a C-like array, you have to explicitly
-make a pointer to the array, this will give you a pointer to the first element.
+对C++程序员来说，Rust的数组有一个很有趣的特点——它们的表示方法。Rust数组是值类型：这意味着它们像其它值一样在栈上分配，而一个数组对象是一系列值，而不是如C中那样，是指向这些值的指针。因此我们上面的代码，`let a = [1_i32, 2, 3, 4];`将会在栈上分配16byte的空间，而执行`let b = a;`将会拷贝16字节。如果你需要一个类似于C中的数组，就必须显式的生成一个指向数组的指针，它会成为一个指向第一个元素的指针。
 
-A final point of difference between arrays in Rust and C++ is that Rust arrays
-can implement traits, and thus have methods. To find the length of an array, for
-example, you use `a.len()`.
+Rust数组雨C数组的最后一点区别在于，Rust数组可以实现trait，因而带有方法。你可以通过调用`a.len()`来得到数组的长度。
 
 
-## Slices
+## 分片
 
-A slice in Rust is just an array whose length is not known at compile time. The
-syntax of the type is just like a fixed length array, except there is no length:
-e.g., `[i32]` is a slice of 32 bit integers (with no statically known length).
+Rust中的分片（slice)是在编译时无法获知长度的数组。除了没有指定长度，这种类型的声明语法与定长数组相仿：比如说`[i32]`是一个对32bit整数的分片，只是在编译时无法得知它的确切长度。
 
-There is a catch with slices: since the compiler must know the size of all
-objects in Rust, and it can't know the size of a slice, then we can never have a
-value with slice type. If you try and write `fn foo(x: [i32])`, for example, the
-compiler will give you an error.
+这导致分片有一个缺陷：因为Rust编译器必须知道所有对象的大小，而却无法确知分片的大小，所以我们不能获取分片类型的值。比方说如果你写出`fn foo(x: [i32])`的句子，编译器就会给你一个错误。
 
-So, you must always have pointers to slices (there are some very technical
-exceptions to this rule so that you can implement your own smart pointers, but
-you can safely ignore them for now). You must write `fn foo(x: &[i32])` (a
-borrowed reference to a slice) or `fn foo(x: *mut [i32])` (a mutable raw pointer
-to a slice), etc.
+因此，你只能获取一个指向分片的指针（这一规则确实有一些非常技术性的例外，从而允许你实现自己的智能指针，然而你完全可以忽略这一例外）。你必须写成`fn foo(x: &[i32])`（一个分片的借出指针）或者 `fn foo(x: *mut [i32])`（一个指向分片的可变原始指针）。
 
-The simplest way to create a slice is by coercion. There are far fewer implicit
-coercions in Rust than there are in C++. One of them is the coercion from fixed
-length arrays to slices. Since slices must be pointer values, this is
-effectively a coercion between pointers. For example, we can coerce `&[i32; 4]`
-to `&[i32]`, e.g.,
+要创建一个分片，最简单的方法是强制类型转换(coercion)。相比C++而言，在Rust中只有非常少的几个隐式类型转换。其中之一便是从定长数组到分片的类型转换。因为分片只能是指针类型，因此这将是最终是一个指针间的类型转换，比如你可以把`&[i32; 4]`转换为`&[i32]`。
 
 ```rust
 let a: &[i32] = &[1, 2, 3, 4];
 ```
 
-Here the right hand side is a fixed length array of length four, allocated on
-the stack. We then take a reference to it (type `&[i32; 4]`). That reference is
-coerced to type `&[i32]` and given the name `a` by the let statement.
+这里右边是一个长度为4的定长数组，分配在栈上。我们之后获得了一个指向它的引用，类型为 `&[i32; 4]`。这个引用之后被转换成了`&[i32]` 并且由let语句赋予了名字`a`。
 
-Again, access is just like C (using `[...]`), and access is bounds checked. You
-can also check the length yourself by using `len()`. So clearly the length of
-the array is known somewhere. In fact all arrays of any kind in Rust have known
-length, since this is essential for bounds checking, which is an integral part
-of memory safety. The size is known dynamically (as opposed to statically in the
-case of fixed length arrays), and we say that slice types are dynamically sized
-types (DSTs, there are other kinds of dynamically sized types too, they'll be
-covered elsewhere).
+与之前相同，访问分片也与C相同，使用`[...]`，而且访问也会进行边界检查。你也可以通过调用`len()`函数来自己完成类型检查。很明显数组的长度会在其它的地方得到。事实上所有Rust中的数组都有确定的长度，因为它们要进行对内存安全十分重要的边界检查。与定长数组不同，对于分片而言，这个大小是在运行时得到的。因此我们可以说分片类型是动态尺寸类型。
 
-Since a slice is just a sequence of values, the size cannot be stored as part of
-the slice. Instead it is stored as part of the pointer (remember that slices
-must always exist as pointer types). A pointer to a slice (like all pointers to
-DSTs) is a fat pointer - it is two words wide, rather than one, and contains the
-pointer to the data plus a payload. In the case of slices, the payload is the
-length of the slice.
+因为分片只是一串值的序列，它的大小不能成为分片本身的一部分。所以它的大小被存储在指针当中（还记得分片必须以一个指针类型存在么）。一个指向分片的指针（像所有其它指向动态尺寸类型的指针一样），是一个所谓的胖指针——它的大小是两个字长而不是一个，它会包含一个指向数据的指针，外加一个载荷。对于分片而言，这个载荷就是分片的长度。
 
 So in the example above, the pointer `a` will be 128 bits wide (on a 64 bit
 system). The first 64 bits will store the address of the `1` in the sequence
@@ -123,95 +72,62 @@ system). The first 64 bits will store the address of the `1` in the sequence
 programmer, these fat pointers can just be treated as regular pointers. But it
 is good to know about (in can affect the things you can do with casts, for
 example).
+所以在上面的例子中，指针`a`在64位计算机上的大小为128 bit。前64 bit存储序列`[1, 2, 3, 4]`中`1`（第一个元素）的地址。而后面的64 bit会存储分片大小`4`。作为Rust程序员，这些胖指针完全可以被视为是普通指针，不过知道它们的构成仍然很有帮助）。
 
 
-### Slicing notation and ranges
+### 分片标记和区间
 
-A slice can be thought of as a (borrowed) view of an array. So far we have only
-seen a slice of the whole array, but we can also take a slice of part of an
-array. There is a special notation for this which is like the indexing
-syntax, but takes a range instead of a single integer. E.g., `a[0..4]`, which
-takes a slice of the first four elements of `a`. Note that the range is
-exclusive at the top and inclusive at the bottom. Examples:
+分片可以被认为是一个（借出的）数组视图。至此我们仅看到了对整个数组的分片，然而我们也可以得到数组一部分的分片。对此有一个特殊的记号来表示，它有些像下标语法，只是用范围代替了单个整数下标，比如`a[0..4]`表示数组`a`的前四个元素，区间标记不包含上界但包含下界（左闭右开）。
 
 ```rust
 let a: [i32; 4] = [1, 2, 3, 4];
-let b: &[i32] = &a;   // Slice of the whole array.
-let c = &a[0..4];     // Another slice of the whole array, also has type &[i32].
-let c = &a[1..3];     // The middle two elements, &[i32].
-let c = &a[1..];      // The last three elements.
-let c = &a[..3];      // The first three element.
-let c = &a[..];       // The whole array, again.
-let c = &b[1..3];     // We can also slice a slice.
+let b: &[i32] = &a;   // 得到整个数组的分片
+let c = &a[0..4];     // 整个数组分片的另一种表示
+let c = &a[1..3];     // 包含中间两个元素的分片
+let c = &a[1..];      // 包含最后三个元素的分片
+let c = &a[..3];      // 包含前三个元素的分片
+let c = &a[..];       // 整个数组的分片
+let c = &b[1..3];     // 可以对分片再次分片
 ```
 
-Note that in the last example, we still need to borrow the result of slicing.
-The slicing syntax produces an unborrowed slice (type: `[i32]`) which we must
-then borrow (to give a `&[i32]`), even if we are slicing a borrowed slice.
+在最后一个例子中，我们仍然需要借出分片的结果。区间语法会产生一个非借出分片（类型为`[i32]`），因此即使我们在对一个借出分片切分我们仍然需要重新借出。
 
-Range syntax can also be used outside of slicing syntax. `a..b` produces an
-iterator which runs from `a` to `b-1`. This can be combined with other iterators
-in the usual way, or can be used in `for` loops:
+区间语法同样用在可以在分片语法外。`a..b`会生成一个从`a`到`b-1`的迭代器。它既可以跟其它迭代器一样使用，也可以用在`for`循环当中。
 
 ```rust
-// Print all numbers from 1 to 10.
+// 打印从1到10的所有数
 for i in 1..11 {
     println!("{}", i);
 }
 ```
 
-## Vecs
+## Vec
 
-A vector is heap allocated and is an owning reference. Therefore (and like
-`Box<_>`), it has move semantics. We can think of a fixed length array
-analogously to a value, a slice to a borrowed reference. Similarly, a vector in
-Rust is analogous to a `Box<_>` pointer.
+一个向量（vector）是在堆上分配的，而且具有所有权的引用。因此它像`Box<_>`一样，具有移动语义。我们可以把定长数组类比为值，分片类比为对值的借出引用。这样的话，我们可以将向量类比为一个`Box<_>`指针。
 
-It helps to think of `Vec<_>` as a kind of smart pointer, just like `Box<_>`,
-rather than as a value itself. Similarly to a slice, the length is stored in the
-'pointer', in this case the 'pointer' is the Vec value.
+像`Box<_>`一样，你可以认为`Vec<_>`是一种智能指针，而非值本身。与分片相似，它的长度存储在"指针"中，只是这个"指针"现在是指Vec的值。
 
-A vector of `i32`s has type `Vec<i32>`. There are no vector literals, but we can
-get the same effect by using the `vec!` macro. We can also create an empty
-vector using `Vec::new()`:
+一个包含`i32`的向量的类型为`Vec<i32>`。虽然没有向量字面量这么一说，我们仍然可以通过`vec!`宏来进行相似的初始化。另外我们可以使用`Vec::new()`来创建一个空的向量。
 
 ```rust
-let v = vec![1, 2, 3, 4];      // A Vec<i32> with length 4.
-let v: Vec<i32> = Vec::new();  // An empty vector of i32s.
+let v = vec![1, 2, 3, 4];      // 一个长度为4的Vec<i32>
+let v: Vec<i32> = Vec::new();  // 一个空的i32向量
 ```
 
-In the second case above, the type annotation is necessary so the compiler can
-know what the vector is a vector of. If we were to use the vector, the type
-annotation would probably not be necessary.
+在上面的第两个例子中，类型标示是必须的，这样编译器才能知道Vec里存的是什么。如果我们使用这个向量，那它的类型标示可以被忽略。
 
-Just like arrays and slices, we can use indexing notation to get a value from
-the vector (e.g., `v[2]`). Again, these are bounds checked. We can also use
-slicing notation to take a slice of a vector (e.g., `&v[1..3]`).
+正像数组和分片，我们可以用下标记号来获取vector中的值，也会进行边界检查。我们也可以用分段记号来获取向量中的分片(`&v[1..3]`)
 
-The extra feature of vectors is that their size can change - they can get longer
-or shorter as needed. For example, `v.push(5)` would add the element `5` to the
-end of the vector (this would require that `v` is mutable). Note that growing a
-vector can cause reallocation, which for large vectors can mean a lot of
-copying. To guard against this you can pre-allocate space in a vector using
-`with_capacity`, see the [Vec docs](https://doc.rust-lang.org/std/vec/struct.Vec.html)
-for more details.
+向量的另外一个特性是它们的尺寸可变——它们可以随需要增长或缩短。比如使用`v.push(5)`可以将`5`加入到向量尾部（这要求`v`是`mut`的）。注意向量的增长可能造成内存重新分配，对很大的向量这会造成很大的拷贝开销。为了解决这一问题，可以使用`with_capacity`进行预分配，详情可见[Vec docs](https://doc.rust-lang.org/std/vec/struct.Vec.html)。
 
 
-## The `Index` traits
+## `Index` traits
 
-Note for readers: there is a lot of material in this section that I haven't
-covered properly yet. If you're following the tutorial, you can skip this
-section, it is a somewhat advanced topic in any case.
+*至读者：这一部分由大量的资料还没有完成。如果你在学习这个教程，可以先跳过本章，无论如何这都应该算是高级话题了。*
 
-The same indexing syntax used for arrays and vectors is also used for other
-collections, such as `HashMap`s. And you can use it yourself for your own
-collections. You opt-in to using the indexing (and slicing) syntax by
-implementing the `Index` trait. This is a good example of how Rust makes
-available nice syntax to user types, as well as built-ins (`Deref` for
-dereferencing smart pointers, as well as `Add` and various other traits, work in
-a similar way).
+在数组和向量中使用的下标语法同样适用于其它容器，比如`HashMap`。如果要实现一个自定义容器，而也想使用类似的下标（和分片）语法，就需要实现`Index` trait。这是展现Rust如何将漂亮的语法应用到用户定义类型的一个很好的例子（`Deref`用来做智能指针的解引用，`Add`以及其它的trait都是一样例子）。
 
-The `Index` trait looks like
+`Index` trait看起来像这样
 
 ```rust
 pub trait Index<Idx: ?Sized> {
@@ -221,16 +137,9 @@ pub trait Index<Idx: ?Sized> {
 }
 ```
 
-`Idx` is the type used for indexing. For most uses of indexing this is `usize`.
-For slicing this is one of the `std::ops::Range` types. `Output` is the type
-returned by indexing, this will be different for each collection. For slicing it
-will be a slice, rather than the type of a single element. `index` is a method
-which does the work of getting the element(s) out of the collection. Note that
-the collection is taken by reference and the method returns a reference to the
-element with the same lifetime.
+`Idx`是一个用于进行索引的类型（意即中括号内的类型），大多数情况下它会是`usize`。对于分片来说这个类型会是`std::ops:Range`。`Output`是用该下标访问后返回的类型，这东西每一个容器都不一样。对于分片来说它会是一个分片而不是某类型的单个元素。`index`是一个方法，它用来执行从容器里返回一个（或一系列）元素的工作。注意容器是以引用传递的，同时方法也返回一个生存期相同的元素引用。
 
-Let's look at the implementation for `Vec` to see how what an implementation
-looks like:
+让我们看一下`Vec`是如何实现上面的trait的
 
 ```rust
 impl<T> Index<usize> for Vec<T> {
@@ -242,27 +151,14 @@ impl<T> Index<usize> for Vec<T> {
 }
 ```
 
-As we said above, indexing is done using `usize`. For a `Vec<T>`, indexing will
-return a single element of type `T`, thus the value of `Output`. The
-implementation of `index` is a bit weird - `(**self)` gets a view of the whole
-vec as a slice, then we use indexing on slices to get the element, and finally
-take a reference to it.
+如我们之前所说，下标是用`usize`来表示。对于`Vec<T>`来说，索引将会返回一个类型为`T`的单个元素，因此`Output`的值为T。对`index`的实现略显奇怪——`(**self)`获取了一个包含整个`Vec`的分片，然后使用分片来获取元素，之后获取一个它的引用。
 
-If you have your own collections, you can implement `Index` in a similar way to
-get indexing and slicing syntax for your collection.
+如果要实现一个自己的容器，你需要实现跟上面相似的实现`Index`来完成下标语法和分片语法。
 
 
-## Initialiser syntax
+## 初始化语法
+对于Rust中的所有数据，数组和向量都必须能正确的初始化。大多数情况下你可能只需要包含很多零的数组，而使用数组字面量相当麻烦。Rust为你提供了一个小小的语法糖来初始化一个填满某指定值的数组`[value;len]`。比如要创建一个包含100个0的数组，可以写成`[0;100]`。
 
-As with all data in Rust, arrays and vectors must be properly initialised. Often
-you just want an array full of zeros to start with and using the array literal
-syntax is a pain. So Rust gives you a little syntactic sugar to initialise an
-array full of a given value: `[value; len]`. So for example to create an array
-with length 100 full of zeros, we'd use `[0; 100]`.
+向量也提供类似的语法，`vec![42; 100]`会初始化一个包含100个42的向量。
 
-Similarly for vectors, `vec![42; 100]` would give you a vector with 100
-elements, each with the value 42.
-
-The initial value is not limited to integers, it can be any expression. For
-array initialisers, the length must be an integer constant expression. For
-`vec!`, it can be any expression with type `usize`.
+初始化值不仅限于整数，它可以是任何表达式。对于数组初始化，长度必须是一个常量整数表达式。对于`vec!`而言，它可以是具有`usize`类型的任何表达式。

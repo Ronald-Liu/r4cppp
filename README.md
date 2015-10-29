@@ -1,146 +1,85 @@
 # Rust For C++ Programmers
 
-A Rust tutorial for experienced C and C++ programmers.
+一个为C/C++程序员写的Rust教程
 
-Jump to [contents](#contents).
-Jump to [contributing](#contributing).
+转到 [目录](#contents).
+转到 [Contributing](#contributing).
 
-This tutorial is intended for programmers who already know how pointers and
-references work and are used to systems programming concepts such as integer
-widths and memory management. We intend to cover, primarily, the differences
-between Rust and C++ to get you writing Rust programs quickly without lots of
-fluff you probably already know.
+本教程是为已经熟悉指针、引用和系统编程基本概念的程序员写的。我们将主要介绍Rust和C++中的区别，以帮助你更快的用Rust编程，而不用花时间去学你已经熟知的知识。
 
-Hopefully, Rust is a pretty intuitive language for C++ programmers. Most of the
-syntax is pretty similar. The big difference (in my experience) is that the
-sometimes vague concepts of good systems programming are strictly enforced by
-the compiler. This can be infuriating at first - there are things you want to
-do, but the compiler won't let you (at least in safe code), and sometimes these
-things *are* safe, but you can't convince the compiler of that. However, you'll
-quickly develop a good intuition for what is allowed. Communicating your own
-notions of memory safety to the compiler requires some new and sometimes
-complicated type annotations. But if you have a strong idea of lifetimes for
-your objects and experience with generic programming, they shouldn't be too
-tough to learn.
+对于C++程序员而言，Rust是一个很直观的语言——它们的大部分语法很相似。而在我看来其间最大的不同在于Rust编译器将一些系统编程中容易混淆的概念进行了更强的限制。这起初看起来会有些令人恼火——因为有些你原本能做的事Rust编译器禁止你去做，即使这些事情确实是安全的，只是编译器不相信而已。不过你很快你就可以培养出写可接受代码的直觉。为了在你和编译器之间就内存安全的问题建立共识，你需要学习一些新的，有时看起来过于繁复的类型标示。但当你对对象的生存期有更强的概念，并有一定经验后，它们就不会特别难学。
 
-This tutorial started as a [series of blog posts](http://featherweightmusings.blogspot.co.nz/search/label/rust-for-c).
-Partly as an aid for me (@nick29581) learning Rust (there is no better way to
-check that you have learnt something than to try and explain it to somebody
-else) and partly because I found the existing resources for learning Rust
-unsatisfactory - they spent too much time on the basics that I already knew and
-used higher level intuitions to describe concepts that could better be explained
-to me using lower level intutitions. Since then, the documentation for Rust has
-got *much* better, but I still think that existing C++ programmers are an
-audience who are a natural target for Rust, but are not particularly well
-catered for.
+这一教程起先是[一系列博客文章](http://featherweightmusings.blogspot.co.nz/search/label/rust-for-c)。我撰写它们，一部分原因是想帮助我自己(@nick29581)学习Rust，另一部分原因是我发现往上现存的Rust学习资源很难令人满意：它们花了太多的时间介绍我已经知道的基础知识，并利用了更高层的知识来讨论Rust中的概念，而我认为使用底层知识介绍它们更能说明问题。过了一段时间，Rust的官方文档已经有了很大的进步，然而我仍然认为C++的程序员，作为最适合学习Rust语言的人，却没有被文档编写者重视。
 
+## 安装Rust
 
-## Installing Rust
+安装Rust的简单方法（至少在Linux和OS X上）是运行`rustup`的脚本，只需要在命令行中输入以下命令
 
-The easiest way to install Rust (on Linux and OS X, at least) is to run the rustup
-script. Simply enter one of the following into your shell:
-
-### Beta Version (Recommended)
+### Beta 版本(推荐）
 ```
 curl -s https://static.rust-lang.org/rustup.sh | sudo sh
 ```
 
-### To get the Nightly Version
-Some rust packages (crates) might not have been updataed to track rust-beta just yet.
+### Nightly 版本
+如果你需要尚未更新到rust-beta中的那些包，可以使用Nightly版本
 ```
 curl -s https://static.rust-lang.org/rustup.sh | sudo sh -s -- --channel=nightly
 ```
 
-You can download nightly binaries for Linux, OS X, and Windows from
-[rust-lang.org](http://www.rust-lang.org/install.html).
+你可以从[rust-lang.org](http://www.rust-lang.org/install.html)下载运行于Linux, OS X和Windows的nightly二进制版本。
 
-You can download the source from [github.com/rust-lang/rust](https://github.com/rust-lang/rust)
-or by running `git clone https://github.com/rust-lang/rust.git`. The compiler is
-pretty straightforward to build - `./configure && make rustc` should do it. See
-[building-from-source](https://github.com/rust-lang/rust#building-from-source)
-for more detailed instructions.
+你也可以从[github.com/rust-lang/rust](https://github.com/rust-lang/rust)中下载或运行`git clone https://github.com/rust-lang/rust.git`来获取最新的源代码。要构建Rust编译器只需要运行`./configure && make rustc`。你可以在[building-from-source](https://github.com/rust-lang/rust#building-from-source)查看更详细的安装指南。
 
 
-## Other resources
+## 其它资源
 
-* [The Rust book/guide](http://doc.rust-lang.org/book/) - the best place for
-  learning Rust in general and probably the best place to go for a second opinion
-  on stuff here or for stuff not covered.
-* [Rust API documentation](http://doc.rust-lang.org/std/index.html) - detailed
-  documentation for the Rust libraries.
-* [The Rust reference manual](http://doc.rust-lang.org/reference.html) - a little
-  out of date in places, but thorough; good for looking up details.
-* [Discuss forum](http://users.rust-lang.org/) - general forum for discussion or
-  questions about using and learning Rust.
-* [#rust irc channel](https://chat.mibbit.com/?server=irc.mozilla.org&channel=%23rust) - probably
-  the best place to get quick answers to your Rust questions if you like irc.
-* [Stackoverflow Rust questions](https://stackoverflow.com/questions/tagged/rust) - answers
-  to many beginner and advanced questions about Rust, but be careful though - Rust
-  has changed *a lot* over the years and some of the answers might be very out of date.
-
+* [The Rust book/guide](http://doc.rust-lang.org/book/) - 全面学习Rust的最好去处，同时也是学习本文没介绍内容的最佳选择
+* [Rust API documentation](http://doc.rust-lang.org/std/index.html) - Rust库的详细文档
+* [The Rust reference manual](http://doc.rust-lang.org/reference.html) - 略微过时的文档，但是还不错
+* [Discuss forum](http://users.rust-lang.org/) - 讨论使用和学习Rust时各类问题的论坛
+* [#rust irc channel](https://chat.mibbit.com/?server=irc.mozilla.org&channel=%23rust) - 如果你热爱使用IRC，这可能是你要找到某个答案最快的地方
+* [Stackoverflow Rust questions](https://stackoverflow.com/questions/tagged/rust) - 寻找有关Rust的基础和高级问题的地方，不过请注意，Rust在这些年来已经有了*非常大*的变化，有些答案在今天可能已经不再适用。
 
 ## Contents
 
 1. [Hello world!](hello%20world.md)
-1. [Intermission - why Rust?](why%20rust.md)
-1. [Control flow](control%20flow.md)
-1. [Primitive types and operators](primitives.md)
-1. [Unique pointers](unique.md)
-1. [Borrowed pointers](borrowed.md)
-1. [Rc and raw pointers](rc%20raw.md)
-1. [Data types](data%20types.md)
-1. [Destructuring pt 1](destructuring.md)
-1. [Destructuring pt 2](destructuring 2.md)
-1. [Arrays and vecs](arrays.md)
-1. [Graphs and arena allocation](graphs/README.md)
+1. [花絮 - 为啥要用Rust?](why%20rust.md)
+1. [控制流](control%20flow.md)
+1. [基本数据类型和操作符](primitives.md)
+1. [Unique指针](unique.md)
+1. [借出指针](borrowed.md)
+1. [Rc与原始指针](rc%20raw.md)
+1. [数据类型](data%20types.md)
+1. [解构 I](destructuring.md)
+1. [解构 II](destructuring 2.md)
+1. [Array与vec](arrays.md)
+1. [实例：图与内存预分配](graphs/README.md)
 
 
 ## Contributing
 
-Yes please!
+跪求！
 
-If you spot a typo or mistake, please submit a PR, don't be shy! Please feel
-free to file [an issue](https://github.com/nick29581/r4cppp/issues/new) for
-larger changes or for new chapters you'd like to see. I'd also be happy to see
-re-organisation of existing work or expanded examples, if you feel the tutorial
-could be improved in those ways.
+如果你发现了错别字或者逻辑错误，赶紧提出Pull Request，千万别害羞！对于更大的变化或者你想看到的其他章节，欢迎提出新[issue](https://github.com/nick29581/r4cppp/issues/new)。如果重新组织已有的文章或者增加新的样例可以让这个教程变的更好，我会非常高兴。
 
-If you'd like to contribute a paragraph, section, or chapter please do! If you
-want ideas for things to cover, see the [list of issues](https://github.com/nick29581/r4cppp/issues),
-in particular those tagged [new material](https://github.com/nick29581/r4cppp/labels/new%20material).
-If you're not sure of something, please get in touch by pinging me here
-(@nick29581) or on irc (nrc, on #rust or #rust-internals).
+如果你想贡献一个段落，一个部分或者整个章节，非常欢迎！如果你希望对某些方面有更多介绍，请看[list of issues](https://github.com/nick29581/r4cppp/issues)，尤其是那些打了 [new material](https://github.com/nick29581/r4cppp/labels/new%20material)Tag的Issue。如果你不确定，欢迎与我联系（@nick29581)或者在IRC里提出 (nrc, 我在 #rust 和 #rust-internals里活动)
 
 
-### Style
+### 文档风格
 
-Obviously, the intended audience is C++ programmers. The tutorial should
-concentrate on things that will be new to experienced C++ programmers, rather
-than a general audience (although, I don't assume the audience is familiar with
-the most recent versions of C++). I'd like to avoid too much basic material and
-definitely avoid too much overlap with other resources, in particular the Rust
-guide/book.
+既然本教程主要针对C++程序员，这里主要介绍的是那些对C++程序员来说不太熟悉的概念（不过并不需要你对最新版本的C++很了解）。我希望能避免介绍太多的基础知识，而且不想和其他资源，尤其是Rust官方文档有过多知识上的重叠。
 
-Work on edge case use cases (e.g., using a different build system from Cargo, or
-writing syntax extensions, using unstable APIs) is definitely welcome, as is
-in-depth work on topics already covered at a high level.
+欢迎对前沿问题的讨论（比如用除了Cargo以外的构建系统，编写语法扩展，使用非稳定的API）。
 
-I'd like to avoid recipe-style examples for converting C++ code to Rust code,
-but small examples of this kind are OK.
+我希望避免写出像“如何将下面的C++代码写成Rust“之类的例子，不过如果有一小部分也是可以的。
 
-Use of different formats (e.g., question and answer/FAQs, or larger worked
-examples) are welcome.
+欢迎使用不同的文档格式（比如FAQs或者更大的实例)
 
-I don't plan on adding exercises or suggestions for mini-projects, but if you're
-interested in that, let me know.
+我不打算添加对迷你项目的练习或者建议，然而如果你有兴趣，请联系我
 
-I'm aiming for a fairly academic tone, but not too dry. All writing should be in
-English (British English, not American English; although I would be very happy
-to have localisations/translations into any language, including American
-English) and be valid GitHub markdown. For advice on writing style, grammar,
-punctuation, etc. see the Oxford Style Manual
-or [The Economist Style Guide](http://www.economist.com/styleguide/introduction).
-Please limit width to 80 columns. I am a fan of the Oxford comma.
+我希望能表现出一副很学术的样子，但也不是那么死板。所有的文字要用（英式）英语写成，当然也欢迎翻译为其它语言（你可以直接提交中文给我——译者），并使用GitHub markdown格式。就写作风格、语法、拼写等等的问题欢迎参看牛津风格手册或 [The Economist Style Guide](http://www.economist.com/styleguide/introduction)
 
-Don't feel like work has to be perfect to be submitted, I'm happy to edit and
-I'm sure other people will be in the future.
+不要强求你的作品必须完美，我很欢迎其他人一起来编辑和修改
+
+##译者续貂
+很早就想学Rust，苦于没有很好的入门教程。 Rust for C++ Programmers对于像我一样的 C 艹程序员来说还是非常有帮助的。网络上介绍Rust的资源本就稀少，中文资源更不必说的极端稀缺。欢迎所有对Rust有兴趣的朋友来一起完善本文，一起帮助Rust在C++程序员，尤其是中国C++程序员中进一步的传播。

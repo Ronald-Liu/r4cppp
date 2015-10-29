@@ -1,20 +1,10 @@
-# Introduction - hello world!
+# 序章 - Hello world!
 
-This is the first in a series of blog posts (none written yet) which aim to help
-experienced C++ programmers learn Rust. Expect updates to be sporadic at best.
-In this first blog post we'll just get setup and do a few super basic things.
-Much better resources are at the tutorial and reference manual.
+本章将介绍如何安装配置和做一些最简单的操作，也许你可以在官方教程和参考手册上找到更好的资源
 
-First you need to install Rust. You can download a nightly build from
-[http://www.rust-lang.org/install.html](http://www.rust-lang.org/install.html)
-(I recommend the nightlies rather than 'stable' versions - the nightlies are
-stable in that they won't crash too much (no more than the stable versions) and
-you're going to have to get used to Rust evolving under you sooner or later
-anyway). Assuming you manage to install things properly, you should then have a
-`rustc` command available to you. Test it with `rustc -v`.
+首先你需要安装Rust。可以从[http://www.rust-lang.org/install.html](http://www.rust-lang.org/install.html)下载一个nightly版本（我个人推荐Nightly版本而不是所谓的稳定版，因为nightly版本并不会比那些所谓的稳定版崩溃的更频繁，而且早晚我们将要使用那些Rust中的新特性）。假设你已经想办法把东西安装熬了，应该可以在命令行中运行`rustc`命令，可以使用 `rustc -v`来测试
 
-Now for our first program. Create a file, copy and paste the following into it
-and save it as `hello.rs` or something equally imaginative.
+现在我们来写第一个程序。先创建一个文件，并把下面的代码复制进去，再保存为`hello.rs`，或者其它一样有创意的名字
 
 ```rust
 fn main() {
@@ -22,23 +12,13 @@ fn main() {
 }
 ```
 
-Compile this using `rustc hello.rs`, and then run `./hello`. It should display
-the expected greeting \o/
+用`rustc hello.rs`，之后运行`./hello`。就应该能显示出预想中的文字 \o/
 
-Two compiler options you should know are `-o ex_name` to specify the name of the
-executable and `-g` to output debug info; you can then debug as expected using
-gdb or lldb, etc. Use `-h` to show other options.
+有两个需要知道的编译器选项，一个是`-o ex_name`用来指定输出文件名，`-g`用来在输出中加入调试信息；你可以用gdb或lldb进行调试。用`-h`选项可以用来显示其它选项的信息。
 
-OK, back to the code. A few interesting points - we use `fn` to define a
-function or method. `main()` is the default entry point for our programs (we'll
-leave program args for later). There are no separate declarations or header
-files as with C++. `println!` is Rust's equivalent of printf. The `!` means that
-it is a macro, for now you can just treat it like a regular function. A subset
-of the standard library is available without needing to be explicitly
-imported/included (we'll talk about that later). The `println!` macros is
-included as part of that subset.
+回到代码上来，有几点有趣的地方：我们使用`fn`来定义函数和方法。`main()`是默认的入口函数（我们把命令行参数留到后面介绍）。Rust中没有C++中头文件和前置声明的概念。`println!`是printf的Rust版本，其中`!`表示这是一个宏(macro)，你可以把它当做一个标准函数来对待。Rust标准库的一些部分是不需要显式包含或引用的，`println!`宏就是其中之一。
 
-Lets change our example a little bit:
+让我们把例子稍微改一下
 
 ```rust
 fn main() {
@@ -47,26 +27,17 @@ fn main() {
 }
 ```
 
-`let` is used to introduce a variable, world is the variable name and it is a
-string (technically the type is `&'static str`, but more on that in a later
-post). We don't need to specify the type, it will be inferred for us.
+`let`用来引入一个新的变量，`world`是变量名，而他是一个字符串（理论上说，它的类型是`&'static str`）。编译器会自动进行类型推断，因此我们不需要指定它的类型。
 
-Using `{}` in the `println!` statement is like using `%s` in printf. In fact, it
-is a bit more general than that because Rust will try to convert the variable to
-a string if it is not one already<sup>[1](#1)</sup>. You can easily play around with this sort of
-thing - try multiple strings and using numbers (integer and float literals will
-work).
+在`println!`中使用`{}`与`printf`中的`%s`很相似。如果没有明确指定<sup>[1](#1)</sup>，Rust会尝试将变量转换为一个字符串，因此它比printf更加通用。你可以用其它的各种类型来试着填进去，试试多个字符串或用数字等等。
 
-If you like, you can explicitly give the type of `world`:
+你也可以显式的指定`world`的类型
 
 ```rust
 let world: &'static str = "world";
 ```
 
-In C++ we write `T x` to declare a variable `x` with type `T`. In Rust we write
-`x: T`, whether in `let` statements or function signatures, etc. Mostly we omit
-explicit types in `let` statements, but they are required for function
-arguments. Lets add another function to see it work:
+在C++中我们把类型声明写成`T x`来声明一个类型为`T`的变量`x`。在Rust中，不论是用在`let`语句还是函数签名上，上面的声明会写为`x: T`。大多数情况下我们会在`let`语句中省略显式类型声明，而在函数参数中，显式类型声明确是必须的。下面的函数展示了怎么用它
 
 ```rust
 fn foo(_x: &'static str) -> &'static str {
@@ -78,28 +49,12 @@ fn main() {
 }
 ```
 
-The function `foo` has a single argument `_x` which is a string literal (we pass
-it "bar" from `main`). We don't actually use that argument in `foo`. Usually,
-Rust will warn us about this. By prefixing the argument name with `_` we avoid
-these warnings. In fact, we don't need to name the argument at all, we could
-just use `_`.
+`foo`函数中有一个变量`_x`，而它是一个字符串字面量（我们将"bar"从`main`中通过它传递进来）。我们在`foo`中并没有用到这个参数，这通常会导致Rust给出一个警告。不过如果我们在变量名前加一个`_`，就可以避免出现这种警告。事实上我们甚至不需要给它一个名字，只需要用一个`_`就可以了。
 
-The return type for a function is given after `->`. If the function doesn't
-return anything (a void function in C++), we don't need to give a return type at
-all (as in `main`). If you want to be super-explicit, you can write `-> ()`,
-`()` is the void type in Rust. `foo` returns a string literal.
+函数的返回值类型在`->`之后给出，如果一个函数什么都不返回（就像C++中的void函数），那就不需要给出返回值类型（就像`main()`函数那样）。如果你想灰常显式的说明这一情况，你可以写成`->()` ，在Rust中`()`就是一个无类型类型。例子中`foo`返回一个字符串字面量。
 
-You don't need the `return` keyword in Rust, if the last expression in a
-function body (or any other body, we'll see more of this later) is not finished
-with a semicolon, then it is the return value. So `foo` will always return
-"world". The `return` keyword still exists so we can do early returns. You can
-replace `"world"` with `return "world";` and it will have the same effect.
+`return`关键字并不是必要的。如果函数体的最后一个表达式没有以`;`结尾，那它将作为函数的返回值。因此`foo`函数会返回"world"。为了实现提前返回，`return`关键字当然也是存在的。你可以用`return "world";`来替代`"world"`，效果是一样的。
 
 ##### 1
 
-This is a programmer specified conversion which uses the `Display` trait, which
-works a bit like `toString` in Java. You can also use `{:?}` which gives a
-compiler generated representation which is sometimes useful for debugging. As
-with printf, there are many other options.
-
-TODO check this footnote hack works
+这里是指自定义的转换函数，需要使用`Display` trait，优点类似于`toString`函数。你可以使用`{:?}`来让编译器产生对调试更加有用的数据表示形式。相对于printf，`println`选择更多的选择。

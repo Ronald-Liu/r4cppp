@@ -46,7 +46,7 @@ curl -s https://static.rust-lang.org/rustup.sh | sudo sh -s -- --channel=nightly
 1. [花絮 - 为啥要用Rust?](why%20rust.md)
 1. [控制流](control%20flow.md)
 1. [基本数据类型和操作符](primitives.md)
-1. [Unique指针](unique.md)
+1. [独占指针](unique.md)
 1. [借出指针](borrowed.md)
 1. [Rc与原始指针](rc%20raw.md)
 1. [数据类型](data%20types.md)

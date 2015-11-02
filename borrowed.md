@@ -1,23 +1,15 @@
-# Borrowed pointers
+# 借出指针
 
-In the last post I introduced unique pointers. This time I will talk about
-another kind of pointer which is much more common in most Rust programs:
-borrowed pointers (aka borrowed references, or just references).
+上一章中介绍了独占指针，这次我会介绍另外一种指针——借出指针（又称借出引用或引用），它在大多数Rust程序中远比独占指针常见。
 
-If we want to have a reference to an existing value (as opposed to creating a
-new value on the heap and pointing to it, as with unique pointers), we must use
-`&`, a borrowed reference. These are probably the most common kind of pointer in
-Rust, and if you want something to fill in for a C++ pointer or reference (e.g.,
-for passing a parameter to a function by reference), this is probably it.
+如果你希望获得指向一个已存在的值的引用（而不是在堆中创建一个新的值并用一个独占指针指向它），我们必须要使用`&`符号，一个借出引用。这是可能是Rust中最为常见的一类指针。它很大程度上跟C++中的指针和引用（在向函数传递参数方面）用法相似。
 
-We use the `&` operator to create a borrowed reference and to indicate reference
-types, and `*` to dereference them. The same rules about automatic dereferencing
-apply as for unique pointers. For example,
+我们使用`&`操作符来创建一个借出引用，使用`*`来解引用。对成员函数的自动解引用规则与独占指针相同。举例来说
 
 ```rust
 fn foo() {
-    let x = &3;   // type: &i32
-    let y = *x;   // 3, type: i32
+    let x = &3;   // 类型为 &i32
+    let y = *x;   // 3, 类型为 i32
     bar(x, *x);
     bar(&y, y);
 }
@@ -27,188 +19,135 @@ fn bar(z: &i32, i: i32) {
 }
 ```
 
-The `&` operator does not allocate memory (we can only create a borrowed
-reference to an existing value) and if a borrowed reference goes out of scope,
-no memory gets deleted.
+`&`操作符并不分配内存（我们只能对已存在的值创建借出引用），一个借出引用退出作用域，它的空间也不会被释放。
 
-Borrowed references are not unique - you can have multiple borrowed references
-pointing to the same value. E.g.,
+借出引用不一定是唯一的，你可以创建多个指向同一个值的借出引用。
 
 ```rust
 fn foo() {
-    let x = 5;                // type: i32
-    let y = &x;               // type: &i32
-    let z = y;                // type: &i32
-    let w = y;                // type: &i32
+    let x = 5;                // 类型为 i32
+    let y = &x;               // 类型为 &i32
+    let z = y;                // 类型为 &i32
+    let w = y;                // 类型为 &i32
     println!("These should all 5: {} {} {}", *w, *y, *z);
 }
 ```
 
-Like values, borrowed references are immutable by default. You can also use
-`&mut` to take a mutable reference, or to denote mutable reference types.
-Mutable borrowed references are unique (you can only take a single mutable
-reference to a value, and you can only have a mutable reference if there are no
-immutable references). You can use mutable reference where an immutable one is
-wanted, but not vice versa. Putting all that together in an example:
+与值相同，借出引用默认是不可变的。你可以用`&mut`来创建一个可变的借出引用（指向的值可变，而非引用本身可变），或者来表示一个可变的借出引用类型。可变借出引用是唯一的，也就是说只能每个值只能由一个可变借出引用指向。可以创建一个指向可变值的不可变引用，反之则不然。下面是一个例子
 
 ```rust
 fn bar(x: &i32) { ... }
-fn bar_mut(x: &mut i32) { ... }  // &mut i32 is a reference to an i32 which
-                                 // can be mutated
+fn bar_mut(x: &mut i32) { ... }  // &mut i32 是一个指向可变的i32的引用
 
 fn foo() {
     let x = 5;
-    //let xr = &mut x;     // Error - can't make a mutable reference to an
-                           // immutable variable
-    let xr = &x;           // Ok (creates an immutable ref)
+    //let xr = &mut x;     // 错误 —— 无法借创建指向不可变值的可变引用
+    let xr = &x;           // OK
     bar(xr);
-    //bar_mut(xr);         // Error - expects a mutable ref
+    //bar_mut(xr);         // 错误 —— 需要一个可变引用
 
     let mut x = 5;
-    let xr = &x;           // Ok (creates an immutable ref)
-    //*xr = 4;             // Error - mutating immutable ref
-    //let xr = &mut x;     // Error - there is already an immutable ref, so we
-                           // can't make a mutable one
+    let xr = &x;           // OK (创建指向可变值的不可变引用)
+    //*xr = 4;             // 错误 —— 修改不可变引用
+    //let xr = &mut x;     // 错误 —— 已有一个不可变引用，因而不能存在可变引用
 
     let mut x = 5;
-    let xr = &mut x;       // Ok (creates a mutable ref)
-    *xr = 4;               // Ok
-    //let xr = &x;         // Error - there is already a mutable ref, so we
-                           // can't make an immutable one
-    //let xr = &mut x;     // Error - can only have one mutable ref at a time
-    bar(xr);               // Ok
-    bar_mut(xr);           // Ok
+    let xr = &mut x;       // OK （创建一个可变引用）
+    *xr = 4;               // OK
+    //let xr = &x;         // 错误 —— 已经有一个可变引用，不能创建一个不可变引用
+    //let xr = &mut x;     // 错误 —— 只能由一个可变引用
+    bar(xr);               // OK
+    bar_mut(xr);           // OK
 }
 ```
 
-Note that the reference may be mutable (or not) independently of the mutableness
-of the variable holding the reference. This is similar to C++ where pointers can
-be const (or not) independently of the data they point to. This is in contrast
-to unique pointers, where the mutableness of the pointer is linked to the
-mutableness of the data. For example,
+注意，一个引用的可变性与这个引用所指向值的可变性没有关系。这有点像C++中，指针的const属性与所指向数据的const属性无关。这一点与独占指针不同，独占指针的可变性与其值的可变性相同。
 
 ```rust
 fn foo() {
     let mut x = 5;
     let mut y = 6;
     let xr = &mut x;
-    //xr = &mut y;        // Error xr is immutable
+    //xr = &mut y;        // 错误 —— xr不可变
 
     let mut x = 5;
     let mut y = 6;
     let mut xr = &mut x;
-    xr = &mut y;          // Ok
+    xr = &mut y;          // OK
 
     let mut x = 5;
     let mut y = 6;
     let mut xr = &x;
-    xr = &y;              // Ok - xr is mut, even though the referenced data is not
+    xr = &y;              // OK —— 虽然xr所指向的值不可变，但xr可变
 }
 ```
 
-If a mutable value is borrowed, it becomes immutable for the duration of the
-borrow. Once the borrowed pointer goes out of scope, the value can be mutated
-again. This is in contrast to unique pointers, which once moved can never be
-used again. For example,
+如果一个可变值被借出，那在被借出的这段时间它不可变。而一旦借出引用退出作用域，这个值又会变为可变。这与独占指针完全不同，借出指针一旦移动就无法继续使用。
 
 ```rust
 fn foo() {
-    let mut x = 5;            // type: i32
+    let mut x = 5;            // 类型: i32
     {
-        let y = &x;           // type: &i32
-        //x = 4;              // Error - x has been borrowed
-        println!("{}", x);    // Ok - x can be read
+        let y = &x;           // 类型: &i32
+        //x = 4;              // 错误 —— x已经被借出
+        println!("{}", x);    // OK —— c可读
     }
-    x = 4;                    // OK - y no longer exists
+    x = 4;                    // OK -  可变借出退出作用域，x重新可变
 }
 ```
 
-The same thing happens if we take a mutable reference to a value - the value
-still cannot be modified. In general in Rust, data can only ever be modified via
-one variable or pointer. Furthermore, since we have a mutable reference, we
-can't take an immutable reference. That limits how we can use the underlying
-value:
+上例中如果是一个可变借出引用也是同样的道理。总的来说在Rust中，数据仅能通过*一个*变量或指针修改，更进一步的，如果已经有一个可变借出引用，就不能创建一个不可变借出引用。这限制了我们如何使用底层的值。
 
 ```rust
 fn foo() {
-    let mut x = 5;            // type: i32
+    let mut x = 5;            // 类型: i32
     {
-        let y = &mut x;       // type: &mut i32
-        //x = 4;              // Error - x has been borrowed
-        //println!("{}", x);  // Error - requires borrowing x
+        let y = &mut x;       // 类型: &mut i32
+        //x = 4;              // 错误 —— x已经被借出
+        //println!("{}", x);  // 错误 —— 需要借出x，而x已被可变借出
     }
-    x = 4;                    // OK - y no longer exists
+    x = 4;                    // OK - y不再存在
 }
 ```
 
-Unlike C++, Rust won't automatically reference a value for you. So if a function
-takes a parameter by reference, the caller must reference the actual parameter.
-However, pointer types will automatically be converted to a reference:
+与C++中不同，Rust不会自动地为值创建引用。如果一个函数的参数为引用，调用方必须显式的获取一个引用作为参数。不过指针类型可以自动转换为引用。
 
 ```rust
 fn foo(x: &i32) { ... }
 
 fn bar(x: i32, y: Box<i32>) {
     foo(&x);
-    // foo(x);   // Error - expected &i32, found i32
+    // foo(x);   // 错误 —— 需要一个&i32, 传入的却是 i32
     foo(y);      // Ok
-    foo(&*y);    // Also ok, and more explicit, but not good style
+    foo(&*y);    // 同样ok, 不过不是很好的风格
 }
 ```
 
-## `mut` vs `const`
+## `mut` 与 `const`
 
-At this stage it is probably worth comparing `mut` in Rust to `const` in C++.
-Superficially they are opposites. Values are immutable by default in Rust and
-can be made mutable by using `mut`. Values are mutable by default in C++, but
-can be made constant by using `const`. The subtler and more important difference
-is that C++ const-ness applies only to the current use of a value, whereas
-Rust's immutability applies to all uses of a value. So in C++ if I have a
-`const` variable, someone else could have a non-const reference to it and it
-could change without me knowing. In Rust if you have an immutable variable, you
-are guaranteed it won't change.
+到这里，很有必要对比一下Rust中的`mut`和C++中的`const`。粗略的来说它们是相反的。默认情况下在Rust中值是不可变的，而可以使用`mut`标记为可变。而C++中值默认是可变的，可以用`const`来标记为不可变。更为重要且微妙的区别在于，C++中的常量性只针对对值的本次用例，而在Rust中不可变性对值的所有用例都适用：在C++中如果我有一个`const`变量，其他人可能会有一个指向它的非`const`引用，并且可能在我不知情的情况下修改它，而在Rust中如果你有一个不可变变量，你可以确定它不会被改变。
 
-As we mentioned above, all mutable variables are unique. So if you have a
-mutable value, you know it is not going to change unless you change it.
-Furthermore, you can change it freely since you know that no one else is relying
-on it not changing.
+如前面所说，可变借出是唯一的，因此如果你有一个可变量，就可以保证如果你不修改它，它就不会变。更进一步，由于不可能有依赖于这个值不变性的其他实例存在，所以你可以任意的修改这个值。
 
-## Borrowing and lifetimes
+## 借出与生存期
 
-One of the primary safety goals of Rust is to avoid dangling pointers (where a
-pointer outlives the memory it points to). In Rust, it is impossible to have a
-dangling borrowed reference. It is only legal to create a borrowed reference to
-memory which will be alive longer than the reference (well, at least as long as
-the reference). In other words, the lifetime of the reference must be shorter
-than the lifetime of the referenced value.
+Rust的一个主要安全目标就是避免悬挂指针（指针的生存期比它指向的对象更长）。在Rust中，不可能创建一个悬挂的借出引用。只有借出引用指向的对象将会比借出引用本身的生存期长（至少相同），编译器才认为是合法的程序。换句话说引用的生存期必须比它所指向的值生存期短。
 
-That has been accomplished in all the examples in this post. Scopes introduced
-by `{}` or functions are bounds on lifetimes - when a variable goes out of scope
-its lifetime ends. If we try to take a reference to a shorter lifetime, such as
-in a narrower scope, the compiler will give us an error. For example,
+这可以通过本章的各个例子看出，由每个`{}`或函数引入的作用域都绑定到了一个生存期——当一个变量退出了作用域，它的生存期也就结束了。如果我们试图获得一个指向更短生存期值的引用，比如说一个更小的作用域，编译器就会提示错误。举个例子
 
 ```rust
 fn foo() {
     let x = 5;
-    let mut xr = &x;  // Ok - x and xr have the same lifetime
+    let mut xr = &x;  // Ok - x和xr有相同的生存期
     {
         let y = 6;
-        //xr = &y     // Error - xr will outlive y
-    }                 // y is released here
-}                     // x and xr are released here
+        //xr = &y     // 错误 - xr比y的生存期更长
+    }                 // y 在这里释放
+}                     // x 和 xr 在这里释放
 ```
 
-In the above example, x and xr don't have the same lifetime because xr starts
-later than x, but it's the end of lifetimes which is more interesting, since you
-can't reference a variable before it exists in any case - something else which
-Rust enforces and which makes it safer than C++.
+上面的例子中，`x`和`xr`的生存期并不相同，因为`xr`晚于`x`生成，但是它们生存期的结束更有意思，因为你不能引用一个尚未存在的值。这是Rust增加限制而变得比C++更安全的又一个例子。
 
-## Explicit lifetimes
+## 显式生存期
 
-After playing with borrowed pointers for a while, you'll probably come across
-borrowed pointers with an explicit lifetime. These have the syntax `&'a T` (cf
-`&T`). They're kind of a big topic since I need to cover lifetime-polymorphism
-at the same time so I'll leave it for another post (there are a few more less
-common pointer types to cover first though). For now, I just want to say that
-`&T` is a shorthand for `&'a T` where `a` is the current scope, that is the
-scope in which the type is declared.
+在使用借出指针一阵之后，你可能会偶然发现具有显式生存期的借出引用。它的语法是`&'a T`（区别于`&T`)。为了说明它还需要介绍生存期多态性，因此我还是单开一章来详述（还有几个不太常见的指针类型要先介绍）。目前为止，只需要知道`&T`是 `&'a T`的缩写形式，其中`a`表示这个类型被声明位置所在的作用域。

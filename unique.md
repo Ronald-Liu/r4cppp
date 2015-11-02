@@ -1,18 +1,10 @@
-# Unique pointers
+# 独占指针
 
-Rust is a systems language and therefore must give you raw access to memory. It
-does this (as in C++) via pointers. Pointers are one area where Rust and C++ are
-very different, both in syntax and semantics. Rust enforces memory safety by
-type checking pointers. That is one of its major advantages over other
-languages. Although the type system is a bit complex, you get memory safety and
-bare-metal performance in return.
+Rust是一个系统级语言,因此必须给予程序员访问原始内存的能力。如C++中一样，这是通过提供指针类型来做到的。不论从语法上还是语义上说，Rust和C++的指针都有较大的差别。Rust通过指针类型检查来强化内存安全性，而这也成为它相比于其他语言的重要优势。虽然类型系统略有些复杂，但是你可以籍此同时获得内存安全性和接近机器语言的性能。
 
-I had intended to cover all of Rust's pointers in one post, but I think the
-subject is too large. So this post will cover just one kind - unique pointers -
-and other kinds will be covered in follow up posts.
+我本想在一章中写完所有的Rust指针，只是这一部分篇幅实在过大，因此这一章只会写一种指针——独占指针。其他类型的指针将在后面的章节中详述。
 
-First, an example without pointers:
-
+先来看一个没有使用指针的例子
 ```rust
 fn foo() {
     let x = 75;
@@ -21,14 +13,9 @@ fn foo() {
 }
 ```
 
-When we reach the end of `foo`, `x` goes out of scope (in Rust as in C++). That
-means the variable can no longer be accessed and the memory for the variable can
-be reused.
+当程序运行到`foo`的最后，`x`会退出作用域。这意味着这一变量将不会再被访问，它的内存因此可以安全的被回收和重用。
 
-In Rust, for every type `T` we can write `Box<T>` for an owning (aka unique)
-pointer to `T`. We use `Box::new(...)` to allocate space on the heap and
-initialise that space with the supplied value. This is similar to `new` in C++.
-For example,
+在Rust中，对于每一个类型`T`，我们可以写`Box<T>`来一个获得一个独占地指向`T`类型对象的指针。我们使用`Box::new(...)`来在堆上分配空间，用提供的值来初始化那个空间。这与C++中的 `new`很像。下面是一个例子
 
 ```rust
 fn foo() {
@@ -36,15 +23,9 @@ fn foo() {
 }
 ```
 
-Here `x` is a pointer to a location on the heap which contains the value `75`.
-`x` has type `Box<int>`; we could have written `let x: Box<int> = Box::new(75);`. This
-is similar to writing `int* x = new int(75);` in C++. Unlike in C++, Rust will
-tidy up the memory for us, so there is no need to call `free` or `delete`.
-Unique pointers behave similarly to values - they are deleted when the variable
-goes out of scope. In our example, at the end of the function `foo`, `x` can no
-longer be accessed and the memory pointed at by `x` can be reused.
+这里`x`是一个指向堆中的指针，指向的位置包含一个值`75`。`x`的类型是`Box<int>`，所以也可以写成`let x: Box<int> = Box::new(75);`。这与C++中写 `int* x = new int(75);`很像。然而与C++中不同的是，Rust会自动地管理相应的内存空间，因此并不需要手动的调用`free`或`delete`。独占指针的特性与值相似——当独占指针退出作用域时就会被删除。在刚才的例子中，`x`在`foo`函数之后不会再被用到，因而`x`指向的位置也会被自动回收。
 
-Owning pointers are dereferenced using the `*` as in C++. E.g.,
+独占指针可以像C++中一样用`*`来解引用。
 
 ```rust
 fn foo() {
@@ -53,27 +34,21 @@ fn foo() {
 }
 ```
 
-As with primitive types in Rust, owning pointers and the data they point to are
-immutable by default. Unlike C, you can't have a mutable (unique) pointer to
-immutable data or vice-versa. Mutability of the data follows from the pointer.
-E.g.,
+像Rust中的基本类型一样，独占指针和它指向的数据默认情况下是不可变的。与C中不同，Rust中不能出现一个指向不可变对象的可变独占指针，反之亦然。数据的可变性与指针相同。
 
 ```rust
 fn foo() {
     let x = Box::new(75);
     let y = Box::new(42);
-    // x = y;         // Not allowed, x is immutable.
-    // *x = 43;       // Not allowed, *x is immutable.
+    // x = y;         // 不允许， x是不可变的
+    // *x = 43;       // 不允许，*x是不可变的
     let mut x = Box::new(75);
-    x = y;            // OK, x is mutable.
-    *x = 43;          // OK, *x is mutable.
+    x = y;            // 允许， x是可变的OK
+    *x = 43;          // 允许， *x是可变的OK
 }
 ```
 
-Owning pointers can be returned from a function and continue to live on. If they
-are returned, then their memory will not be freed, i.e., there are no dangling
-pointers in Rust. The memory will not leak. However, it will eventually go out of
-scope and then it will be free. E.g.,
+独占指针可以从函数中返回，指向的地址不会被释放，从而继续存活。然而，它最终总会退出某个作用域从而被回收，因此Rust中不会出现悬挂指针和内存泄露。
 
 ```rust
 fn foo() -> Box<i32> {
@@ -87,26 +62,20 @@ fn bar() {
 }
 ```
 
-Here, memory is initialised in `foo`, and returned to `bar`. `x` is returned
-from `foo` and stored in `y`, so it is not deleted. At the end of `bar`, `y`
-goes out of scope and so the memory is reclaimed.
+上面的例子中，内存在`foo`中初始化，并返回到`bar`中。`x`从`foo`中返回并存储到`y`中，因此不会被删除。在`bar`的最后，`y`退出了作用域，它的内存就被回收了。
 
-Owning pointers are unique (also called linear) because there can be only one
-(owning) pointer to any piece of memory at any time. This is accomplished by
-move semantics. When one pointer points at a value, any previous pointer can no
-longer be accessed. E.g.,
+独占指针之所以称为独占（或成为线形），是因为同时只能有一个独占指针指向相应的内存区域。这是通过移动语义来实现的。当一个独占指针指向了一个值，之前的其他任何指针都没法访问这个值。
 
 ```rust
 fn foo() {
     let x = Box::new(75);
     let y = x;
-    // x can no longer be accessed
-    // let z = *x;   // Error.
+    // x不再能被访问
+    // let z = *x;   // 错误
 }
 ```
 
-Likewise, if an owning pointer is passed to another function or stored in a
-field, it can no longer be accessed:
+类似的，当一个独占指针被传递给另外一个函数或存储到一个域中，它也不能再被使用了。
 
 ```rust
 fn bar(y: Box<int>) {
@@ -115,28 +84,16 @@ fn bar(y: Box<int>) {
 fn foo() {
     let x = Box::new(75);
     bar(x);
-    // x can no longer be accessed
-    // let z = *x;   // Error.
+    // x不再能被访问
+    // let z = *x;   // 错误
 }
 ```
 
-Rust's unique pointers are similar to C++ `std::unique_ptr`s. In Rust, as in
-C++, there can be only one unique pointer to a value and that value is deleted
-when the pointer goes out of scope. Rust does most of its checking statically
-rather than at runtime. So, in C++ accessing a unique pointer whose value has
-moved will result in a runtime error (since it will be null). In Rust this
-produces a compile time error and you cannot go wrong at runtime.
+Rust中的独占指针与C++中的`std::unique_ptr`非常相似。只能有一个独占指针指向同一个值，而当独占指针退出作用域时，他们对应的值就会被回收。不过Rust在编译时而非运行时进行了大部分检查。所以在C++中访问一个值已经被移动的独占指针将会导致运行时错误，而在Rust中这将导致编译错误，所以在运行时绝不会出错。
 
-We'll see later that it is possible to create other pointer types which point at
-a unique pointer's value in Rust. This is similar to C++. However, in C++ this
-allows you to cause errors at runtime by holding a pointer to freed memory. That
-is not possible in Rust (we'll see how when we cover Rust's other pointer
-types).
+我们之后将会看到，在Rust中你可以创建其他类型的指针指向一个独占指针所指向的值。这与C++中相似。然而在C++，你可能编写出一段代码使用一个指向已被释放区域的指针，因而导致运行时错误。而在Rust中，编译器不会允许这样的代码编译通过。
 
-As shown above, owning pointers must be dereferenced to use their values.
-However, method calls automatically dereference, so there is no need for a `->`
-operator or to use `*` for method calls. In this way, Rust pointers are a bit
-similar to both pointers and references in C++. E.g.,
+上面说过，独占指针必须通过解引用来访问其中的值，然而函数调用时自动解引用的，因此在进行函数调用时不需要使用`->`和`*`。从这方面讲，Rust中的指针与C++中的指针和引用都有相似之处。举个例子
 
 ```rust
 fn bar(x: Box<Foo>, y: Box<Box<Box<Box<Foo>>>>) {
@@ -145,9 +102,9 @@ fn bar(x: Box<Foo>, y: Box<Box<Box<Box<Foo>>>>) {
 }
 ```
 
-Assuming that the type `Foo` has a method `foo()`, both these expressions are OK.
+假设`Foo`类型有一个函数`foo()`，上述两个表达式都是合法的。
 
-Calling Box::new() with an existing value does not take a reference to that value, it copies that value. So,
+对一个已存在的值调用`Box::new()`不会获取它的引用，而会对值作复制。
 
 ```rust
 fn foo() {
@@ -158,10 +115,6 @@ fn foo() {
 }
 ```
 
-In general, Rust has move rather than copy semantics (as seen above with unique
-pointers). Primitive types have copy semantics, so in the above example the
-value `3` is copied, but for more complex values it would be moved. We'll cover
-this in more detail later.
+大多数情况下，相比于拷贝语义，Rust更倾向于移动语义。如上面的例子所示，基本数据类型有拷贝语义，而复杂的数据类型将会有移动语义。之后将详细解释这一点。
 
-Sometimes when programming, however, we need more than one reference to a value.
-For that, Rust has borrowed pointers. I'll cover those in the next post.
+不过在编程时，我们有时需要不止一个对值的引用。Rust中有借出指针来应付这种情况。我们将在之后谈到。

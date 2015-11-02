@@ -1,59 +1,26 @@
-# Reference counted and raw pointers
+# 引用计数和原始指针
 
-TODO add discussion of custom pointers and Deref trait (maybe later, not here)
+目前我们已经介绍了独占指针和借出指针。独占指针与C++中的`std::unique_ptr`很相似，而当你在C++中用了指针或引用的地方，在Rust中你可以默认考虑借出指针。Rust还有少数几个更罕见的内建和库中实现的指针类型。它们很像你在C++中用到的各种智能指针。
 
-So far we've covered unique and borrowed pointers. Unique pointers are very
-similar to the new std::unique_ptr in C++ and borrowed references are the
-'default' pointer you usually reach for if you would use a pointer or reference
-in C++. Rust has a few more, rarer pointers either in the libraries or built in
-to the language. These are mostly similar to various kinds of smart pointers you
-might be used to in C++.
+我花了不少时间来写这一章，然而仍然不太满意。不论在我的文章中还是在Rust的实现上，这部分都有很多虎头蛇尾，我希望这在之后的写作中和Rust语言开发的过程中能有所改善。你可以首先跳过这一部分，因为你大概也不怎么会用到它们。
 
-This post took a while to write and I still don't like it. There are a lot of
-loose ends here, both in my write up and in Rust itself. I hope some will get
-better with later posts and some will get better as the language develops. If
-you are learning Rust, you might even want to skip this stuff for now, hopefully
-you won't need it. Its really here just for completeness after the posts on
-other pointer types.
-
-It might feel like Rust has a lot of pointer types, but it is pretty similar to
-C++ once you think about the various kinds of smart pointers available in
-libraries. In Rust, however, you are more likely to meet them when you first
-start learning the language. Because Rust pointers have compiler support, you
-are also much less likely to make errors when using them.
+看起来Rust中有很多指针类型，其实这就像C++在标准库中有很多智能指针一样。只不过在Rust中，你刚开始就会遇到他们。Rust中的指针是编译器支持的，因此相比C++，使用它们更不容易出错。
 
 I'm not going to cover these in as much detail as unique and borrowed references
 because, frankly, they are not as important. I might come back to them in more
 detail later on.
+我不想像介绍独占指针那样介绍它们，因为说实话它们真的不那么重要。也许之后我会回头来完善他们。
 
-## Rc<T>
+## `Rc<T>`
 
-Reference counted pointers come as part of the rust standard library. They are
-in the `std::rc` module (we'll cover modules soon-ish. The modules are the
-reason for the `use` incantations in the examples). A reference counted pointer
-to an object of type `T` has type `Rc<T>`. You create reference counted pointers
-using a static method (which for now you can think of like C++'s, but we'll see
-later they are a bit different) - `Rc::new(...)` which takes a value to create
-the pointer to. This constructor method follows Rust's usual move/copy semantics
-(like we discussed for unique pointers) - in either case, after calling Rc::new,
-you will only be able to access the value via the pointer.
+引用计数指针是Rust标准库德一部分，它位于`std::rc`模块中（我们将会在不远的将来说到模块，本章的`use`指令就是为了引入模块的）。一个指向`T`类型的引用计数指针的类型为`Rc<T>`。你可以使用静态方法（可以暂时理解为C++ 中的静态函数，不过之后会讲它们之间的差异）——`Rc::new(...)`来创建一个引用计数指针，它可以用一个值来初始化这个指针所指向的位置。这一构造函数遵循Rust的移动/拷贝语义（如我们之前讨论独占指针所说）——不论何时，在调用Rc::new之后，你将只能通过这个指针来访问那个值。
 
-As with the other pointer types, the `.` operator does all the dereferencing you
-need it to. You can use `*` to manually dereference.
+像其他指针类型一样，`.`操作符可以自动地进行解引用，也可以用`*`来手动解引用。
 
-To pass a ref-counted pointer you need to use the `clone` method. This kinda
-sucks, and hopefully we'll fix that, but that is not for sure (sadly). You can
-take a (borrowed) reference to the pointed at value, so hopefully you don't need
-to clone too often. Rust's type system ensures that the ref-counted variable
-will not be deleted before any references expire. Taking a reference has the
-added advantage that it doesn't need to increment or decrement the ref count,
-and so will give better performance (although, that difference is probably
-marginal since Rc objects are limited to a single thread and so the ref count
-operations don't have to be atomic). As in C++, you can also take a reference to
-the Rc pointer.
 
-An Rc example:
+如果需要传递引用计数指针，你需要使用`clone`函数。这有点难看，但愿之后可以修复它，但是也一定能做到。因为可以获得对于它的借出指针，所以通常你并不需要经常使用`clone`。Rust的类型系统保证引用计数所指向的变量在所有引用退出作用域之前不会被删除。取得一个引用计数指针的借出引用不需要增加或减少引用计数，从而得到更好的性能（不过性能提高很有限，因为引用计数对象被限制在一个单独的线程内，因此引用计数操作不需要是原子操作）。
 
+一个Rc的例子
 ```rust
 use std::rc::Rc;
 
@@ -69,8 +36,7 @@ fn foo() {
    // and the memory will be deleted.
 ```
 
-Ref counted pointers are always immutable. If you want a mutable ref-counted
-object you need to use a RefCell (or Cell) wrapped in an `Rc`.
+引用计数指针总是不可变的。如果你需要一个可变的引用计数对象，你必须用`RefCell`或`Cell`来包裹`Rc`内的类型
 
 ## Cell and RefCell
 
@@ -82,39 +48,15 @@ counted object you need a Cell or RefCell wrapped in an Rc. As a first
 approximation, you probably want Cell for primitive data and RefCell for objects
 with move semantics. So, for a mutable, ref-counted int you would use
 `Rc<Cell<int>>`.
+Cell和RefCell是一个可以帮你绕过可变性规则的结构。在介绍Rust数据结构之前可能有点难以理解，所以我会之后再介绍这个比较tricky的对象。现在你只需要知道如果你需要一个可变的引用计数对象，你需要用`Cell`或`RefCell`来包裹Rc中的类型，`Cell`一般用于基本类型数据，而`RefCell`用于有引用语义的对象。所以，要得到一个可变的有引用计数的`int`你可以写成`Rc<Cell<int>>`。
 
-## \*T - raw pointers
+## `*T` - 原始指针
 
-Finally, Rust has two kinds of raw pointers (aka unsafe pointers): `*const T`
-for an immutable raw pointer, and `*mut T` for a mutable raw pointer. They are
-created using `&` or `&mut` (you might need to specify a type to get a `*T`
-rather than a `&T` since the `&` operator can create either a borrowed reference
-or a raw pointer). Raw pointers are like C pointers, just a pointer to memory
-with no restrictions on how they are used (you can't do pointer arithmetic
-without casting, but you can do it that way if you must). Raw pointers are the
-only pointer type in Rust which can be null. There is no automatic dereferencing
-of raw pointers (so to call a method you have to write `(*x).foo()`) and no
-automatic referencing. The most important restriction is that they can't be
-dereferenced (and thus can't be used) outside of an unsafe block. In regular
-Rust code you can only pass them around.
+Rust有两类原始指针（也叫非安全指针）：`*const T`用于不可变原始指针；`*mut T`用于可变的原始指针。可以通过`&`和`&mut`来分别创建它们，由于`&`操作符默认用来创建借出指针，因此你需要显式指定类型来得到一个`*T`而不是`&T`。原始指针就像C中的指针，它只是一个指向内存区域的值，并且对于它的使用没有任何限制（你不能在不做转换的情况下进行指针算数，不过如果你非要这么做的话也是可以做到的）。原始指针是Rust中唯一可以是null的指针类型。原始指针没有自动地解引用，因此你需要用`(*x).foo()`来访问具体的数据。最重要的一个限制是，在普通的Rust代码中原始指针只能被传递，它们不能在`unsafe`块之外解引用，因此也就不能在那之外被使用。
 
-So, what is unsafe code? Rust has strong safety guarantees, and (rarely) they
-prevent you doing something you need to do. Since Rust aims to be a systems
-language, it has to be able to do anything that is possible and sometimes that
-means doing things the compiler can't verify is safe. To accomplish that, Rust
-has the concept of unsafe blocks, marked by the `unsafe` keyword. In unsafe code
-you can do unsafe things - dereference a raw pointer, index into an array
-without bounds checking, call code written in another language via the FFI, or
-cast variables. Obviously, you have to be much more careful writing unsafe code
-than writing regular Rust code. In fact, you should only very rarely write
-unsafe code. Mostly it is used in very small chunks in libraries, rather than in
-client code. In unsafe code you must do all the things you normally do in C++ to
-ensure safety. Furthermore, you must manually ensure that you maintain the
-invariants which the compiler would usually enforce. Unsafe blocks allow you to
-manually enforce Rust's invariants, it does not allow you to break those
-invariants. If you do, you can introduce bugs both in safe and unsafe code.
+那么究竟什么是`unsafe`块呢？Rust有很强的安全性承诺，而且它在很罕见的情况下会禁止你作一些你必须做的事。由于Rust致力于成为一门系统编程语言，因此即使编译器无法验证代码的安全性，也必须允许做任何可能做的事。为了做到这一点，Rust有一个`unsafe`块的概念。在`unsafe`代码中，你可以做一些不安全的事——对原始指针作解引用，对数组作没有边界检查的访问，通过FFI调用其它语言的代码，或者做变量类型转换。很显然，在编写非安全代码时你需要加倍小心。事实上，你应该在非常罕见的情况下才会用到`unsafe`代码，主要是用在库的非常小段的代码中，而不是客户端代码。在`unsafe`块中你必须做C++中你经常做的事来保证安全性。另外，你必须手动保证通常由编译器保证的不变性。`unsafe`块要求你手动的保证Rust的不变性，如果你没有做到，你将会在`unsafe`代码内外同时引入错误。
 
-An example of using an raw pointer:
+下面是一个使用原始指针的例子
 
 ```rust
 fn foo() {
@@ -125,16 +67,13 @@ fn foo() {
 
 fn add_5(p: *mut i32) -> i32 {
     unsafe {
-        if !p.is_null() { // Note that *-pointers do not auto-deref, so this is
-                          // a method implemented on *i32, not i32.
+        if !p.is_null() { // 注意：原始指针没有自动解引用，所以is_null是一个*i32中的函数，而不是i32中的
             *p + 5
         } else {
-            -1            // Not a recommended error handling strategy.
+            -1            // 这不是推荐的错误处理模式
         }
     }
 }
 ```
 
-And that concludes our tour of Rust's pointers. Next time we'll take a break
-from pointers and look at Rust's data structures. We'll come back to borrowed
-references again in a later post though.
+以上介绍了所有的Rust指针。下一章将介绍Rust中的数据类型，之后再回到借出指针的问题。

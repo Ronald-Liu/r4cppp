@@ -1,14 +1,8 @@
-# Control flow
+# 控制流
 
-## If
+## `if`
 
-The `if` statement is pretty much the same in Rust as C++. One difference is
-that the braces are mandatory, but brackets around the expression being tested
-are not. Another is that `if` is an expression, so you can use it the same way
-as the ternary `?` operator in C++ (remember from last time that if the last
-expression in a block is not terminated by a semi-colon, then it becomes the
-value of the block). There is no ternary `?` in Rust. So, the following two
-functions do the same thing:
+在Rust中，`if`语句的使用与C++几乎完全一致，有一个小区别是，不能省略大括号，而在测试表达式外侧的括号则可以省略。另外一个区别是在Rust中，`if`是一个表达式，如之前说过，大括号中最后一个不以`;`结尾的语句就是`if`表达式的值，所以你可以像C++中的`?`一样使用它（Rust中没有`?`）。下面两个代码做的事情完全相同。
 
 ```rust
 fn foo(x: i32) -> &'static str {
@@ -30,15 +24,15 @@ fn bar(x: i32) -> &'static str {
 }
 ```
 
-The first is a fairly literal translation of what you might write in C++. The
-second is better Rust style.
 
-You can also write `let x = if ...`, etc.
+第一种基本上是C++写法的翻译版，而第二种则更具Rust风格。
+
+你也可以写`let x = if ...`一类的句子
 
 
-## Loops
+## 循环
 
-Rust has while loops, again just like C++:
+Rust跟C++一样有while循环
 
 ```rust
 fn main() {
@@ -50,8 +44,7 @@ fn main() {
 }
 ```
 
-There is no do...while loop in Rust, but we do have the `loop` statement which
-just loops forever:
+在Rust中没有`do..while`循环，不过我们可以使用`loop`语句来写一个死循环
 
 ```rust
 fn main() {
@@ -62,15 +55,12 @@ fn main() {
 ```
 
 Rust has `break` and `continue` just like C++.
+Rust跟C++一样有`break`和`continue`指令。
 
 
-## For loops
+## For循环
 
-Rust also has `for` loops, but these are a bit different. Lets say you have a
-vector of integers and you want to print them all (we'll cover vectors/arrays,
-iterators, and generics in more detail in the future. For now, know that a
-`Vec<T>` is a sequence of `T`s and `iter()` returns an iterator from anything
-you might reasonably want to iterate over). A simple `for` loop would look like:
+Rust也有`for`循环，不过跟C++中的不太一样。假设现在有一个包含很多整数的向量，而你像把它们都打印出来。在讲vector和数组的那一章中会具体说怎么用迭代器和范型，这里我们只需要知道`Vec<T>`是一个包含`T`类型的序列，而`iter()`函数可以返回一个迭代器用来获取vector中的值。一个简单的`for`循环可以这样写
 
 ```rust
 fn print_all(all: Vec<i32>) {
@@ -80,10 +70,7 @@ fn print_all(all: Vec<i32>) {
 }
 ```
 
-TODO also &all/all instead of all.iter()
-
-If we want to index over the indices of `all` (a bit more like a standard C++
-for loop over an array), you could do
+如果你希望用下标来遍历`all`（像在C++中遍历普通数组那样），你可以写成：
 
 ```rust
 fn print_all(all: Vec<i32>) {
@@ -93,13 +80,12 @@ fn print_all(all: Vec<i32>) {
 }
 ```
 
-Hopefully, it is obvious what the `len` function does. TODO range notation
+`len()`函数的意思你懂的。
 
 
 ## Switch/Match
 
-Rust has a match expression which is similar to a C++ switch statement, but much
-more powerful. This simple version should look pretty familiar:
+Rust中有`match`语句，与C++中的`switch`语句相似，不过它更加强大。最简单的`match`用法看起来会很熟悉。
 
 ```rust
 fn print_some(x: i32) {
@@ -112,15 +98,7 @@ fn print_some(x: i32) {
 }
 ```
 
-There are some syntactic differences - we use `=>` to go from the matched value
-to the expression to execute, and the match arms are separated by `,` (that last
-`,` is optional). There are also some semantic differences which are not so
-obvious: the matched patterns must be exhaustive, that is all possible values of
-the matched expression (`x` in the above example) must be covered. Try removing
-the `y => ...` line and see what happens; that is because we only have matches
-for 0, 1, and 10, but there are obviously lots of other integers which don't get
-matched. In that last arm, `y` is bound to the value being matched (`x` in this
-case). We could also write:
+这里有一些语法上的区别：我们用`=>`来分割匹配模式与需要执行的表达式，每一个分支之间用`,`分隔。上面的例子中，`y`会匹配未与之前任何值匹配的值。另外有一些不那么明显的语义区别：`match`的分支必须是穷尽的，这意味着匹配模式必须覆盖所有可能的匹配值。可以尝试下如果从在上面的例子中移除`y => ..`分支会发生什么。我们也可以写成
 
 ```rust
 fn print_some(x: i32) {
@@ -130,12 +108,9 @@ fn print_some(x: i32) {
 }
 ```
 
-Here the `x` in the match arm introduces a new variable which hides the argument
-`x`, just like declaring a variable in an inner scope.
+分支中的`x`引入了一个新变量，因此在分支中会隐蔽掉函数参数中的`x`，这很像在内部作用域中变量对外部同名变量的隐蔽。
 
-If we don't want to name the variable, we can use `_` for an unnamed variable,
-which is like having a wildcard match. If we don't want to do anything, we can
-provide an empty branch:
+如果你不希望命名一个变量，可以用`_`来占位。如果我们什么都不需要做，可以写一个空的分支。
 
 ```rust
 fn print_some(x: i32) {
@@ -148,12 +123,9 @@ fn print_some(x: i32) {
 }
 ```
 
-Another semantic difference is that there is no fall through from one arm to the
-next.
+另外一个语义区别是`match`分支之间不会有C++中那种执行穿透现象。
 
-We'll see in later posts that match is extremely powerful. For now I want to
-introduce just a couple more features - the 'or' operator for values and `if`
-clauses on arms. Hopefully an example is self-explanatory:
+在之后的章节中我们会发现`match`是非常强大的。目前只介绍几个简单的特性——`or`操作符和`if`从句，它们都可以顾名思义。
 
 ```rust
 fn print_some_more(x: i32) {
@@ -166,8 +138,7 @@ fn print_some_more(x: i32) {
 }
 ```
 
-Just like `if` expressions, `match` statements are actually expressions so we
-could re-write the last example as:
+与`if`表达式相同，`match`语句也是一个表达式，所以我们可以将最后一个例子改写成
 
 ```rust
 fn print_some_more(x: i32) {
@@ -182,21 +153,11 @@ fn print_some_more(x: i32) {
 }
 ```
 
-Note the semi-colon after the closing brace, that is because the `let` statement
-is a statement and must take the form `let msg = ...;`. We fill the rhs with a
-match expression (which doesn't usually need a semi-colon), but the `let`
-statement does. This catches me out all the time.
+注意由于前一句事实上是一个`let`语句，必须有`let msg = ...;`的形式，所以最后一个大括号后的分号必不可少。
 
-Motivation: Rust match statements avoid the common bugs with C++ switch
-statements - you can't forget a `break` and unintentionally fall through; if you
-add a case to an enum (more later on) the compiler will make sure it is covered
-by your `match` statement.
+Rust中的`match`语句避免了C++中`switch`语句的不少常见Bug：你绝不为因为忘记写`break`得到不想要的执行穿越；如果写出了一些对匹配值的模式，Rust编译器会自动帮你检查是否覆盖了所有可能的情况。
 
 
-## Method call
+## 方法调用
 
-Finally, just a quick note that methods exist in Rust, similarly to C++. They
-are always called via the `.` operator (no `->`, more on this in another post).
-We saw a few examples above (`len`, `iter`). We'll go into more detail in the
-future about how they are defined and called. Most assumptions you might make
-from C++ or Java are probably correct.
+最终简单介绍一下Rust中的成员方法。与C++中类似，他们总是使用`.`操作符来调用（没有`->`操作符，这会在其他章节中讲到）。刚才我们看到了`len`和`iter`两个例子。之后我们会更深入的讲到如何定义和调用他们，不过在学习之前，你可以认为你在Java和C++中学到的经验都是适用的。

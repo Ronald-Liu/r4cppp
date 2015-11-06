@@ -1,41 +1,23 @@
-# Primitive types and operators
+# 基本数据类型和运算符
 
-TODO int/uint -> isuze/usize
+Rust有很多跟C++基本相同的算术和逻辑运算符。其中`bool`类型在两个语言中完全一样。Rust也有与C++中相似的整数、无符号整数和浮点数。不过语法略有不同。Rust用`int`来表示整形，`uint`用来表示无符号整形。这些类型的大小与指针大小相同，比如在32为系统中，`uint`表示32位无符号整数。Rust也支持显式的长度标记，就是在`u`或`i`后面跟上8,16,32,64等数：`u8`表示长度为8位的无符号整数，而`i32`表示长度为32位的有符号整数。对于浮点数，Rust中有`f32`和`f64`两种类型。
 
-Rust has pretty much the same arithmetic and logical operators as C++. `bool` is
-the same in both languages (as are the `true` and `false` literals). Rust has
-similar concepts of integers, unsigned integers, and floats. However the syntax
-is a bit different. Rust uses `int` to mean an integer and `uint` to mean an
-unsigned integer. These types are pointer sized. E.g., on a 32 bit system,
-`uint` means a 32 bit unsigned integer. Rust also has explicitly sized types
-which are `u` or `i` followed by 8, 16, 32, or 64. So, for example, `u8` is an 8
-bit unsigned integer and `i32` is a 32 bit signed integer. For floats, Rust has
-`f32` and `f64`.
-
-Numeric literals can take suffixes to indicate their type (using `i` and `u`
-instead of `int` and `uint`). If no suffix is given, Rust tries to infer the
-type. If it can't infer, it uses `int` or `f64` (if there is a decimal point).
-Examples:
+数值字面量后面可以写后缀来指示他们的类型。如果没有给出后缀，Rust会试图推断它的类型。在无法推断时，会假定位`int`（值为整数时)和`f64`（值为小数时）
 
 ```rust
 fn main() {
     let x: bool = true;
-    let x = 34;   // type int
-    let x = 34u;  // type uint
+    let x = 34;   // 类型：int
+    let x = 34u;  // 类型：uint
     let x: u8 = 34u8;
     let x = 34i64;
     let x = 34f32;
 }
 ```
 
-As a side note, Rust lets you redefine variables so the above code is legal -
-each `let` statement creates a new variable `x` and hides the previous one. This
-is more useful than you might expect due to variables being immutable by
-default.
+上面的例子可以看出，Rust允许你重新定义同名的变量。每个`let`语句创建一个新的`x`并且隐蔽之前的一个。由于变量本身默认是不可变的，允许重新定义就显得尤其有用。
 
-Numeric literals can be given as binary, octal, and hexadecimal, as well as
-decimal. Use the `0b`, `0o`, and `0x` prefixes, respectively. You can use an
-underscore anywhere in a numeric literal and it will be ignored. E.g,
+除了十进制外，数字字面值可以用二进制、八进制、十六进制来给出。他们分别对应`0b`、`0o`和`0x`前缀。你可以在字面值中间加入下划线来方便阅读，他们将在编译时被忽略。
 
 ```rust
 fn main() {
@@ -47,36 +29,22 @@ fn main() {
 }
 ```
 
-Rust has chars and strings, but since they are Unicode, they are a bit different
-from C++. I'm going to postpone talking about them until after I've introduced
-pointers, references, and vectors (arrays).
+Rust中有字符和字符串，不过由于他们都是Unicode，因此与C++中的对应物略有不同。我将在介绍完指针引用和数组之后着重说这点。
 
-Rust does not implicitly coerce numeric types. In general, Rust has much less
-implicit coercion and subtyping than C++. Rust uses the `as` keyword for
-explicit coercions and casting. Any numeric value can be cast to another numeric
-type. `as` cannot be used to convert between booleans and numeric types. E.g.,
+Rust不会进行数值的隐式类型转换。总的来说，Rust相比C++只有很少几个隐式类型转换。如果需要显式类型转换，Rust提供`as`关键字。通过`as`关键字可以在任意两个数值类型间转换，但是不能进行布尔型和数值之间的转换。
 
 ```rust
 fn main() {
-    let x = 34u as int;     // cast unsigned int to int
-    let x = 10 as f32;      // int to float
-    let x = 10.45f64 as i8; // float to int (loses precision)
-    let x = 4u8 as u64;     // gains precision
-    let x = 400u16 as u8;   // 144, loses precision (and thus changes the value)
+    let x = 34u as int;     
+    let x = 10 as f32;      
+    let x = 10.45f64 as i8; // float to int (丢失小数部分)
+    let x = 4u8 as u64;     
+    let x = 400u16 as u8;   // 144, 丢失精度
     println!("`400u16 as u8` gives {}", x);
-    let x = -3i8 as u8;     // 253, signed to unsigned (changes sign)
+    let x = -3i8 as u8;     // 253，丢失符号和精度
     println!("`-3i8 as u8` gives {}", x);
-    //let x = 45u as bool;  // FAILS!
+    //let x = 45u as bool;  // 编译错误
 }
 ```
 
-Rust has the following numeric operators: `+`, `-`, `*`, `/`, `%`; bitwise
-operators: `|`, `&`, `^`, `<<`, `>>`; comparison operators: `==`, `!=`, `>`,
-`<`, `>=`, `<=`; short-circuit logical operators: `||`, `&&`. All of these
-behave as in C++, however, Rust is a bit stricter about the types the operators
-can be applied to - the bitwise operators can only be applied to integers and
-the logical operators can only be applied to booleans. Rust has the `-` unary
-operator which negates a number. The `!` operator negates a boolean and inverts
-every bit on an integer type (equivalent to `~` in C++ in the latter case). Rust
-has compound assignment operators as in C++, e.g., `+=`, but does not have
-increment or decrement operators (e.g., `++`).
+Rust有下面的如下数值运算符：`+`,`-`,`*`,`/`,`%`；位运算符有：`|`,`&`,`^`,`<<`,`>>`；比较运算符有：`==`,`!=`,`>`,`<`,`>=`,`<=`；具有求值短路的逻辑运算符：`||`,`&&`。所有运算符的行为与C++中完全相同，只不过Rust中对类型的限制更强：位运算符只能用于整数而逻辑运算符只能用于布尔值。Rust中有一元`-`运算符。`!`运算符对于布尔值取反，对整数则按位取反（与C++中的`~`相同）。Rust有与C++中完全一样的自操作运算符(`+=`等等），但没有自增自减运算符（如`++`）。
